@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body {
+  background-color: #06060b;
+  color: #f5f7ff;
+  overscroll-behavior: none;
+  height: 100%;
+}
+
+/* App-like feel: this is a game shell, not a browser page. */
+* { -webkit-tap-highlight-color: transparent; }
+
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+}
+img.draggable-ok { pointer-events: auto; }
+
+::-webkit-scrollbar { width: 0px; background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/[0.04] backdrop-blur-glass border border-white/[0.08] shadow-glass rounded-card;
+  }
+  .glass-panel-cyan { @apply glass-panel border-cyan/30 shadow-glow-cyan; }
+  .glass-panel-magenta { @apply glass-panel border-magenta/30 shadow-glow-magenta; }
+  .glass-panel-violet { @apply glass-panel border-violet/30 shadow-glow-violet; }
+
+  /* The signature "duel seam" divider between two competing profiles */
+  .duel-seam { @apply relative w-px self-stretch bg-seam-gradient; }
+  .duel-seam::before {
+    content: "";
+    @apply absolute inset-0 bg-seam-gradient animate-seam-flicker;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3
+      font-display font-semibold text-void bg-cyan
+      shadow-glow-cyan active:scale-[0.97] transition-transform
+      focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3
+      font-display font-semibold text-ink-primary glass-panel
+      active:scale-[0.97] transition-transform
+      focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan;
+  }
+
+  .stat-mono { @apply font-mono tabular-nums tracking-tight; }
+  }
