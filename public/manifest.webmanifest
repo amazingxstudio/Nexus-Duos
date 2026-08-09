@@ -1,0 +1,14 @@
+{
+  "name": "Nexus Duos",
+  "short_name": "Nexus Duos",
+  "description": "Real-time 1v1 duels, connected through Telegram.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06060B",
+  "theme_color": "#06060B",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
