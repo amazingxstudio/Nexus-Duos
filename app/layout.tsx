@@ -3,24 +3,11 @@ import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { BottomNav } from "@/components/ui/BottomNav";
+import { AmbientBackground } from "@/components/ui/AmbientBackground";
 
-const display = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-display",
-});
-
-const body = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-body",
-});
-
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-mono",
-});
+const display = Space_Grotesk({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-display" });
+const body = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-body" });
+const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "Nexus Duos",
@@ -45,10 +32,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script src="https://telegram.org/js/telegram-web-app.js" async />
       </head>
       <body className="font-body min-h-screen bg-void bg-duel-radial antialiased">
-        <AppProviders>
-          {children}
-          <BottomNav />
-        </AppProviders>
+        <AmbientBackground />
+        <div className="relative z-10">
+          <AppProviders>
+            {children}
+            <BottomNav />
+          </AppProviders>
+        </div>
       </body>
     </html>
   );
