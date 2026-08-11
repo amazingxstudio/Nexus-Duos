@@ -1,10 +1,58 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { Trophy, Frown, Minus, Bot } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+import { useAuthStore } from "@/store/useAuthStore";
+import { getGameMeta } from "@/lib/games";
+
+interface MatchEntry {
+  id: string; game: string; game_key: string; mode: string; date: string;
+  self: { nickname: string; score: number };
+  opponent: { nickname: string; player_id?: string; score: number };
+  result: "WIN" | "LOSS" | "DRAW" | null;
+}
+
 export default function HistoryPage() {
+  const token = useAuthStore((s) => s.token);
+  const [matches, setMatches] = useState<MatchEntry[] | null>(null);
+
+  useEffect(() => {
+    apiFetch<{ matches: MatchEntry[] }>("/history/me", { token }).then((res) => setMatches(res.matches)).catch(() => setMatches([]));
+  }, [token]);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-      <div className="glass-panel w-full max-w-sm p-8">
-        <p className="font-display text-xs uppercase tracking-[0.3em] text-cyan">Coming in Batch 5</p>
-        <h1 className="mt-2 font-display text-xl font-bold text-ink-primary">Match History</h1>
-        <p className="mt-2 text-sm text-ink-muted">Your past duels will show up here.</p>
+    <main className="min-h-screen px-5 pb-28 pt-8">
+      <h1 className="mb-6 font-display text-2xl font-bold text-ink-primary">Match History</h1>
+      {matches === null && <p className="text-ink-muted">Loading…</p>}
+      {matches?.length === 0 && <div className="glass-panel p-8 text-center text-ink-muted">No matches yet — go find a duel.</div>}
+      <div className="flex flex-col gap-3">
+        {matches?.map((m, i) => {
+          const meta = getGameMeta(m.game_key);
+          const Icon = meta?.icon;
+          const ResultIcon = m.result === "WIN" ? Trophy : m.result === "LOSS" ? Frown : Minus;
+          const resultColor = m.result === "WIN" ? "text-cyan" : m.result === "LOSS" ? "text-magenta" : "text-ink-muted";
+          return (
+            <motion.div key={m.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="glass-panel flex items-center gap-3 p-4">
+              {Icon && <span className="icon-badge h-10 w-10 shrink-0 bg-white/5"><Icon size={18} className="text-ink-muted" /></span>}
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-sm font-semibold text-ink-primary">{m.game}</p>
+                <p className="text-xs text-ink-muted">{m.mode === "PRACTICE_AI" ? "Practice · AI" : "Ranked"} · {new Date(m.date).toLocaleDateString()}</p>
+                {m.opponent.player_id ? (
+                  <Link href={`/profile/${m.opponent.player_id}`} className="text-xs text-violet">vs {m.opponent.nickname}</Link>
+                ) : (
+                  <p className="flex items-center gap-1 text-xs text-ink-muted"><Bot size={12} /> vs AI</p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="stat-mono text-sm text-ink-primary">{m.self.score} – {m.opponent.score}</p>
+                <p className={`mt-0.5 flex items-center justify-end gap-1 text-xs font-semibold uppercase ${resultColor}`}><ResultIcon size={12} />{m.result ?? "—"}</p>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </main>
   );
