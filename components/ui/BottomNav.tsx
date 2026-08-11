@@ -2,33 +2,36 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
+import { Home, Swords, History, Settings, Info } from "lucide-react";
 
 const ITEMS = [
-  { href: "/", label: "Home", icon: "⌂" },
-  { href: "/find", label: "Duel", icon: "⚔" },
-  { href: "/history", label: "History", icon: "◷" },
-  { href: "/settings", label: "Settings", icon: "⚙" },
-  { href: "/about", label: "About", icon: "ℹ" },
+  { href: "/", label: "Home", Icon: Home },
+  { href: "/find", label: "Duel", Icon: Swords },
+  { href: "/history", label: "History", Icon: History },
+  { href: "/settings", label: "Settings", Icon: Settings },
+  { href: "/about", label: "About", Icon: Info },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
-
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[env(safe-area-inset-bottom)]">
-      <div className="glass-panel mb-3 flex w-full max-w-sm items-center justify-between px-2 py-2">
+    <nav className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
+      <div className="glass-panel flex w-full max-w-sm items-center justify-between px-2 py-2">
         {ITEMS.map((item) => {
           const active = pathname === item.href;
+          const Icon = item.Icon;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex flex-1 flex-col items-center gap-0.5 rounded-full py-2 text-[10px] transition ${
-                active ? "text-cyan" : "text-ink-muted"
-              }`}
-            >
-              <span className="text-lg leading-none">{item.icon}</span>
-              {item.label}
+            <Link key={item.href} href={item.href} className="relative flex flex-1 flex-col items-center gap-1 rounded-full py-2 text-[10px]">
+              {active && (
+                <motion.span
+                  layoutId="nav-active-pill"
+                  className="absolute inset-x-2 inset-y-0.5 rounded-full bg-cyan/10 border border-cyan/30"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <Icon size={18} strokeWidth={2.25} className={`relative z-10 transition-colors ${active ? "text-cyan" : "text-ink-muted"}`} />
+              <span className={`relative z-10 transition-colors ${active ? "text-cyan" : "text-ink-muted"}`}>{item.label}</span>
             </Link>
           );
         })}
