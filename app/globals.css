@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-}
+:root { color-scheme: dark; }
 
 html, body {
   background-color: #06060b;
@@ -13,25 +11,18 @@ html, body {
   height: 100%;
 }
 
-/* App-like feel: this is a game shell, not a browser page. */
 * { -webkit-tap-highlight-color: transparent; }
 
 body {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  position: relative;
 }
 
-.selectable {
-  -webkit-user-select: text;
-  user-select: text;
-}
+.selectable { -webkit-user-select: text; user-select: text; }
 
-img {
-  -webkit-user-drag: none;
-  user-drag: none;
-  pointer-events: none;
-}
+img { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
 img.draggable-ok { pointer-events: auto; }
 
 ::-webkit-scrollbar { width: 0px; background: transparent; }
@@ -44,33 +35,63 @@ img.draggable-ok { pointer-events: auto; }
   }
 }
 
-@layer components {
-  .glass-panel {
-    @apply bg-white/[0.04] backdrop-blur-glass border border-white/[0.08] shadow-glass rounded-card;
+@layer base {
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
+}
+
+@layer components {
+  .glass-panel { @apply relative bg-white/[0.04] backdrop-blur-glass border border-white/[0.08] shadow-glass rounded-card; }
   .glass-panel-cyan { @apply glass-panel border-cyan/30 shadow-glow-cyan; }
   .glass-panel-magenta { @apply glass-panel border-magenta/30 shadow-glow-magenta; }
   .glass-panel-violet { @apply glass-panel border-violet/30 shadow-glow-violet; }
 
-  /* The signature "duel seam" divider between two competing profiles */
-  .duel-seam { @apply relative w-px self-stretch bg-seam-gradient; }
-  .duel-seam::before {
-    content: "";
-    @apply absolute inset-0 bg-seam-gradient animate-seam-flicker;
+  .glass-card { @apply glass-panel transition-all duration-200 ease-out; }
+  .glass-card:active { @apply scale-[0.97] bg-white/[0.07]; }
+  @media (hover: hover) {
+    .glass-card:hover { @apply bg-white/[0.06] border-white/[0.14] -translate-y-0.5; }
   }
 
+  .duel-seam { @apply relative w-px self-stretch bg-seam-gradient; }
+  .duel-seam::before { content: ""; @apply absolute inset-0 bg-seam-gradient animate-seam-flicker; }
+
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3
+    @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full px-6 py-3
       font-display font-semibold text-void bg-cyan
-      shadow-glow-cyan active:scale-[0.97] transition-transform
+      shadow-glow-cyan active:scale-[0.96] transition-transform duration-150
       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan;
   }
+  .btn-primary::after {
+    content: "";
+    @apply absolute inset-0 opacity-0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%);
+    background-size: 200% 100%;
+  }
+  @media (hover: hover) {
+    .btn-primary:hover::after { @apply opacity-100 animate-shimmer; }
+  }
+
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3
       font-display font-semibold text-ink-primary glass-panel
-      active:scale-[0.97] transition-transform
+      active:scale-[0.96] transition-all duration-150
       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan;
   }
-
-  .stat-mono { @apply font-mono tabular-nums tracking-tight; }
+  @media (hover: hover) {
+    .btn-ghost:hover { @apply bg-white/[0.08] border-white/20; }
   }
+
+  .btn-primary:disabled, .btn-ghost:disabled { @apply opacity-40 pointer-events-none; }
+
+  .icon-badge { @apply flex items-center justify-center rounded-full; }
+  .glow-orb { @apply pointer-events-none absolute rounded-full blur-3xl; }
+  .stat-mono { @apply font-mono tabular-nums tracking-tight; }
+}
