@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use as usePromise } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
@@ -18,17 +18,21 @@ interface RoomData {
   game?: { key: string; name: string } | null;
 }
 
-export default function RoomPage({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = usePromise(params);
+// Next.js 14 passes dynamic route params synchronously (not a Promise — that's a Next.js 15 pattern).
+export default function RoomPage({ params }: { params: { code: string } }) {
+  const { code } = params;
   const { token, user } = useAuthStore();
   const socket = useSocket();
   const [room, setRoom] = useState<RoomData | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [matchId, setMatchId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [opponentReady, setOpponentReady] = useState(false);
 
   useEffect(() => {
-    apiFetch<{ room: RoomData }>(`/rooms/${code}`, { token }).then((res) => setRoom(res.room));
+    apiFetch<{ room: RoomData }>(`/rooms/${code}`, { token })
+      .then((res) => setRoom(res.room))
+      .catch(() => setLoadError(true));
   }, [code, token]);
 
   useEffect(() => {
@@ -64,8 +68,22 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     }
   }, [ready, opponentReady, room, socket]);
 
+  if (loadError) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+        <p className="text-ink-primary">Couldn&apos;t load this room.</p>
+        <p className="text-sm text-ink-muted">It may not exist, or the server is waking up — try again in a moment.</p>
+      </main>
+    );
+  }
+
   if (!room) {
-    return <main className="flex min-h-screen items-center justify-center"><Loader2 className="animate-spin text-ink-muted" /></main>;
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3">
+        <Loader2 className="animate-spin text-cyan" />
+        <p className="text-sm text-ink-muted">Loading room…</p>
+      </main>
+    );
   }
 
   const opponent = room.player1.id === user?.id ? room.player2 : room.player1;
