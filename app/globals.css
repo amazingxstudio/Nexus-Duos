@@ -94,4 +94,6 @@ img.draggable-ok { pointer-events: auto; }
   .icon-badge { @apply flex items-center justify-center rounded-full; }
   .glow-orb { @apply pointer-events-none absolute rounded-full blur-3xl; }
   .stat-mono { @apply font-mono tabular-nums tracking-tight; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
 }
