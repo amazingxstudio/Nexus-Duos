@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Trophy, Frown, Minus, Bot } from "lucide-react";
+import { Trophy, Frown, Minus, Bot, RefreshCw } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getGameMeta } from "@/lib/games";
@@ -14,19 +14,34 @@ interface MatchEntry {
   opponent: { nickname: string; player_id?: string; score: number };
   result: "WIN" | "LOSS" | "DRAW" | null;
 }
+const CACHE_KEY = "nexus_history_cache";
 
 export default function HistoryPage() {
   const token = useAuthStore((s) => s.token);
   const [matches, setMatches] = useState<MatchEntry[] | null>(null);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    apiFetch<{ matches: MatchEntry[] }>("/history/me", { token }).then((res) => setMatches(res.matches)).catch(() => setMatches([]));
-  }, [token]);
+  function load() {
+    setError(false);
+    const cached = sessionStorage.getItem(CACHE_KEY);
+    if (cached) setMatches(JSON.parse(cached));
+    apiFetch<{ matches: MatchEntry[] }>("/history/me", { token })
+      .then((res) => { setMatches(res.matches); sessionStorage.setItem(CACHE_KEY, JSON.stringify(res.matches)); })
+      .catch(() => { if (!cached) setError(true); });
+  }
+
+  useEffect(() => { if (token) load(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <main className="min-h-screen px-5 pb-28 pt-8">
       <h1 className="mb-6 font-display text-2xl font-bold text-ink-primary">Match History</h1>
-      {matches === null && <p className="text-ink-muted">Loading…</p>}
+      {error && (
+        <div className="glass-panel flex flex-col items-center gap-3 p-8 text-center">
+          <p className="text-ink-muted">Couldn&apos;t load history.</p>
+          <button onClick={load} className="btn-ghost"><RefreshCw size={16} />Retry</button>
+        </div>
+      )}
+      {!error && matches === null && <div className="flex flex-col gap-3">{[0, 1, 2].map((i) => <div key={i} className="glass-panel h-20 animate-pulse-glow p-4" />)}</div>}
       {matches?.length === 0 && <div className="glass-panel p-8 text-center text-ink-muted">No matches yet — go find a duel.</div>}
       <div className="flex flex-col gap-3">
         {matches?.map((m, i) => {
@@ -40,11 +55,7 @@ export default function HistoryPage() {
               <div className="min-w-0 flex-1">
                 <p className="font-display text-sm font-semibold text-ink-primary">{m.game}</p>
                 <p className="text-xs text-ink-muted">{m.mode === "PRACTICE_AI" ? "Practice · AI" : "Ranked"} · {new Date(m.date).toLocaleDateString()}</p>
-                {m.opponent.player_id ? (
-                  <Link href={`/profile/${m.opponent.player_id}`} className="text-xs text-violet">vs {m.opponent.nickname}</Link>
-                ) : (
-                  <p className="flex items-center gap-1 text-xs text-ink-muted"><Bot size={12} /> vs AI</p>
-                )}
+                {m.opponent.player_id ? <Link href={`/profile/${m.opponent.player_id}`} className="text-xs text-violet">vs {m.opponent.nickname}</Link> : <p className="flex items-center gap-1 text-xs text-ink-muted"><Bot size={12} /> vs AI</p>}
               </div>
               <div className="text-right">
                 <p className="stat-mono text-sm text-ink-primary">{m.self.score} – {m.opponent.score}</p>
