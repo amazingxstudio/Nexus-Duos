@@ -13,18 +13,17 @@ const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transiti
 export default function HomePage() {
   const { user, status } = useAuthStore();
 
+  const headline =
+    status === "authenticated" ? `Ready, ${user?.first_name ?? "Player"}?`
+    : status === "authenticating" ? "Signing you in…"
+    : status === "error" ? "Sign-in needed"
+    : "Loading…";
+
   return (
     <motion.main variants={container} initial="hidden" animate="show" className="flex min-h-screen flex-col px-5 pb-28 pt-8">
-      <motion.header variants={item} className="mb-8 flex items-center justify-between">
-        <div>
-          <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Nexus Duos</p>
-          <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">
-            {status === "authenticated" ? `Ready, ${user?.first_name ?? "Player"}?` : "Connecting…"}
-          </h1>
-        </div>
-        <div className="glass-panel flex h-11 w-11 items-center justify-center rounded-full">
-          <span className="stat-mono text-xs text-cyan">{user?.profile?.player_id?.slice(-4) ?? "····"}</span>
-        </div>
+      <motion.header variants={item} className="mb-8">
+        <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Nexus Duos</p>
+        <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">{headline}</h1>
       </motion.header>
 
       <motion.section variants={item} className="glass-panel flex items-stretch p-1">
@@ -39,27 +38,30 @@ export default function HomePage() {
       </motion.div>
 
       <motion.section variants={item} className="mt-10">
+        <h2 className="mb-3 font-display text-sm uppercase tracking-widest text-ink-muted">Games — tap to duel</h2>
+        <div className="relative">
+          <div className="scrollbar-hide flex gap-3 overflow-x-auto pb-2">
+            {GAMES.map((game) => {
+              const Icon = game.icon;
+              const c = ACCENT_CLASSES[game.accent];
+              return (
+                <Link key={game.key} href="/find" className={`glass-card flex w-32 shrink-0 flex-col items-start gap-2 border p-4 ${c.border}`}>
+                  <span className={`icon-badge h-9 w-9 ${c.bg}`}><Icon size={18} strokeWidth={2} className={c.text} /></span>
+                  <p className="font-display text-xs font-semibold leading-tight text-ink-primary">{game.name}</p>
+                </Link>
+              );
+            })}
+          </div>
+          <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-void to-transparent" />
+        </div>
+      </motion.section>
+
+      <motion.section variants={item} className="mt-10">
         <h2 className="mb-3 font-display text-sm uppercase tracking-widest text-ink-muted">Your Stats</h2>
         <div className="grid grid-cols-3 gap-3">
           <StatCard icon={Target} label="Matches" value={user?.profile?.total_matches ?? 0} />
           <StatCard icon={Percent} label="Win Rate" value={`${winRate(user?.profile)}%`} />
           <StatCard icon={Trophy} label="Score" value={user?.profile?.total_score ?? 0} />
-        </div>
-      </motion.section>
-
-      <motion.section variants={item} className="mt-10">
-        <h2 className="mb-3 font-display text-sm uppercase tracking-widest text-ink-muted">Games</h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none]">
-          {GAMES.map((game) => {
-            const Icon = game.icon;
-            const c = ACCENT_CLASSES[game.accent];
-            return (
-              <div key={game.key} className={`glass-card flex w-32 shrink-0 flex-col items-start gap-2 border p-4 ${c.border}`}>
-                <span className={`icon-badge h-9 w-9 ${c.bg}`}><Icon size={18} strokeWidth={2} className={c.text} /></span>
-                <p className="font-display text-xs font-semibold leading-tight text-ink-primary">{game.name}</p>
-              </div>
-            );
-          })}
         </div>
       </motion.section>
 
