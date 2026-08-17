@@ -1,5 +1,3 @@
-import type { Config } from "tailwindcss";
-
 /**
  * NEXUS DUOS — Design Token System
  * ---------------------------------
@@ -18,7 +16,12 @@ function withOpacity(variable: string) {
     opacityValue === undefined ? `rgb(var(${variable}))` : `rgb(var(${variable}) / ${opacityValue})`;
 }
 
-const config: Config = {
+// Not typed as `Config` on purpose: the withOpacity() function pattern
+// below is Tailwind's own documented way to support CSS-variable colors
+// with opacity modifiers, but the tailwindcss package's TS types don't
+// declare function values as valid — even though Tailwind accepts them
+// fine at runtime. Typing this loosely avoids a false-positive build error.
+const config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
