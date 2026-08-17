@@ -6,23 +6,34 @@ import type { Config } from "tailwindcss";
  * Signature: "Duel Split" — every core screen is built around a seam of
  * light dividing two competing presences (you / rival). Color and motion
  * exist to make that seam feel alive, not decorative.
+ *
+ * Colors are driven by CSS variables (see app/globals.css) so the
+ * Light/Dark/Adaptive theme switcher can swap the whole palette by toggling
+ * one class on <html>. The variables hold unitless "R G B" triplets, and
+ * withOpacity() wraps them in rgb(... / <alpha>) so Tailwind's opacity
+ * modifiers (bg-cyan/10, border-cyan/30, etc.) keep working correctly.
  */
+function withOpacity(variable: string) {
+  return ({ opacityValue }: { opacityValue?: string }) =>
+    opacityValue === undefined ? `rgb(var(${variable}))` : `rgb(var(${variable}) / ${opacityValue})`;
+}
+
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        void: "var(--color-void)",
-        surface: "var(--color-surface)",
-        "surface-raised": "var(--color-surface-raised)",
-        cyan: { DEFAULT: "var(--color-cyan)", dim: "var(--color-cyan-dim)" },
-        magenta: { DEFAULT: "var(--color-magenta)", dim: "var(--color-magenta-dim)" },
-        violet: { DEFAULT: "var(--color-violet)", dim: "var(--color-violet-dim)" },
-        ember: { DEFAULT: "var(--color-ember)", dim: "var(--color-ember-dim)" },
+        void: withOpacity("--color-void"),
+        surface: withOpacity("--color-surface"),
+        "surface-raised": withOpacity("--color-surface-raised"),
+        cyan: { DEFAULT: withOpacity("--color-cyan"), dim: withOpacity("--color-cyan-dim") },
+        magenta: { DEFAULT: withOpacity("--color-magenta"), dim: withOpacity("--color-magenta-dim") },
+        violet: { DEFAULT: withOpacity("--color-violet"), dim: withOpacity("--color-violet-dim") },
+        ember: { DEFAULT: withOpacity("--color-ember"), dim: withOpacity("--color-ember-dim") },
         ink: {
-          primary: "var(--color-ink-primary)",
-          muted: "var(--color-ink-muted)",
-          faint: "var(--color-ink-faint)",
+          primary: withOpacity("--color-ink-primary"),
+          muted: withOpacity("--color-ink-muted"),
+          faint: withOpacity("--color-ink-faint"),
         },
       },
       fontFamily: {
