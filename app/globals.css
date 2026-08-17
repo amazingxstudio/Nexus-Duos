@@ -4,39 +4,41 @@
 
 :root {
   color-scheme: dark;
-  --color-void: #06060B;
-  --color-surface: #0F1018;
-  --color-surface-raised: #161826;
-  --color-cyan: #00E5FF;
-  --color-cyan-dim: #0A8CA3;
-  --color-magenta: #FF2E9A;
-  --color-magenta-dim: #9C1A63;
-  --color-violet: #7C5CFF;
-  --color-violet-dim: #4B3799;
-  --color-ember: #FFB454;
-  --color-ember-dim: #9C7331;
-  --color-ink-primary: #F5F7FF;
-  --color-ink-muted: #8B93B0;
-  --color-ink-faint: #4A4F66;
+  /* Values are unitless "R G B" triplets (not hex) — required so Tailwind
+     can inject alpha for opacity modifiers like bg-cyan/10, border-cyan/30. */
+  --color-void: 6 6 11;
+  --color-surface: 15 16 24;
+  --color-surface-raised: 22 24 38;
+  --color-cyan: 0 229 255;
+  --color-cyan-dim: 10 140 163;
+  --color-magenta: 255 46 154;
+  --color-magenta-dim: 156 26 99;
+  --color-violet: 124 92 255;
+  --color-violet-dim: 75 55 153;
+  --color-ember: 255 180 84;
+  --color-ember-dim: 156 115 49;
+  --color-ink-primary: 245 247 255;
+  --color-ink-muted: 139 147 176;
+  --color-ink-faint: 74 79 102;
 }
 
 /* Light theme — toggled via the .theme-light class on <html> (see ThemeProvider) */
 .theme-light {
   color-scheme: light;
-  --color-void: #F3F4FA;
-  --color-surface: #FFFFFF;
-  --color-surface-raised: #EDEFF7;
-  --color-cyan: #0090A8;
-  --color-cyan-dim: #00B8D4;
-  --color-magenta: #C40064;
-  --color-magenta-dim: #FF2E9A;
-  --color-violet: #5B3FD9;
-  --color-violet-dim: #7C5CFF;
-  --color-ember: #B36A00;
-  --color-ember-dim: #FFB454;
-  --color-ink-primary: #14151C;
-  --color-ink-muted: #5B5F70;
-  --color-ink-faint: #9096A8;
+  --color-void: 243 244 250;
+  --color-surface: 255 255 255;
+  --color-surface-raised: 237 239 247;
+  --color-cyan: 0 144 168;
+  --color-cyan-dim: 0 184 212;
+  --color-magenta: 196 0 100;
+  --color-magenta-dim: 255 46 154;
+  --color-violet: 91 63 217;
+  --color-violet-dim: 124 92 255;
+  --color-ember: 179 106 0;
+  --color-ember-dim: 255 180 84;
+  --color-ink-primary: 20 21 28;
+  --color-ink-muted: 91 95 112;
+  --color-ink-faint: 144 150 168;
 }
 
 html, body {
