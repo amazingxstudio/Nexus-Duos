@@ -2,15 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: dark; }
+:root {
+  color-scheme: dark;
+  --color-void: #06060B;
+  --color-surface: #0F1018;
+  --color-surface-raised: #161826;
+  --color-cyan: #00E5FF;
+  --color-cyan-dim: #0A8CA3;
+  --color-magenta: #FF2E9A;
+  --color-magenta-dim: #9C1A63;
+  --color-violet: #7C5CFF;
+  --color-violet-dim: #4B3799;
+  --color-ember: #FFB454;
+  --color-ember-dim: #9C7331;
+  --color-ink-primary: #F5F7FF;
+  --color-ink-muted: #8B93B0;
+  --color-ink-faint: #4A4F66;
+}
+
+/* Light theme — toggled via the .theme-light class on <html> (see ThemeProvider) */
+.theme-light {
+  color-scheme: light;
+  --color-void: #F3F4FA;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #EDEFF7;
+  --color-cyan: #0090A8;
+  --color-cyan-dim: #00B8D4;
+  --color-magenta: #C40064;
+  --color-magenta-dim: #FF2E9A;
+  --color-violet: #5B3FD9;
+  --color-violet-dim: #7C5CFF;
+  --color-ember: #B36A00;
+  --color-ember-dim: #FFB454;
+  --color-ink-primary: #14151C;
+  --color-ink-muted: #5B5F70;
+  --color-ink-faint: #9096A8;
+}
 
 html, body {
-  background-color: #06060b;
-  color: #f5f7ff;
+  background-color: var(--color-void);
+  color: var(--color-ink-primary);
   overscroll-behavior: none;
   height: 100%;
 }
 
+/* App-like feel: this is a game shell, not a browser page. */
 * { -webkit-tap-highlight-color: transparent; }
 
 body {
@@ -20,9 +56,16 @@ body {
   position: relative;
 }
 
-.selectable { -webkit-user-select: text; user-select: text; }
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
 
-img { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
+img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+}
 img.draggable-ok { pointer-events: auto; }
 
 ::-webkit-scrollbar { width: 0px; background: transparent; }
@@ -49,20 +92,36 @@ img.draggable-ok { pointer-events: auto; }
 }
 
 @layer components {
-  .glass-panel { @apply relative bg-white/[0.04] backdrop-blur-glass border border-white/[0.08] shadow-glass rounded-card; }
+  /* ---- Glass surfaces ---- */
+  .glass-panel {
+    @apply relative bg-white/[0.04] border border-white/[0.08] shadow-glass rounded-card;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+  .theme-light .glass-panel {
+    @apply bg-black/[0.03] border-black/[0.06];
+  }
   .glass-panel-cyan { @apply glass-panel border-cyan/30 shadow-glow-cyan; }
   .glass-panel-magenta { @apply glass-panel border-magenta/30 shadow-glow-magenta; }
   .glass-panel-violet { @apply glass-panel border-violet/30 shadow-glow-violet; }
 
-  .glass-card { @apply glass-panel transition-all duration-200 ease-out; }
+  /* Interactive card: lifts and brightens on press/hover */
+  .glass-card {
+    @apply glass-panel transition-all duration-200 ease-out;
+  }
   .glass-card:active { @apply scale-[0.97] bg-white/[0.07]; }
   @media (hover: hover) {
     .glass-card:hover { @apply bg-white/[0.06] border-white/[0.14] -translate-y-0.5; }
   }
 
+  /* The signature "duel seam" divider between two competing profiles */
   .duel-seam { @apply relative w-px self-stretch bg-seam-gradient; }
-  .duel-seam::before { content: ""; @apply absolute inset-0 bg-seam-gradient animate-seam-flicker; }
+  .duel-seam::before {
+    content: "";
+    @apply absolute inset-0 bg-seam-gradient animate-seam-flicker;
+  }
 
+  /* ---- Buttons ---- */
   .btn-primary {
     @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full px-6 py-3
       font-display font-semibold text-void bg-cyan
@@ -89,11 +148,20 @@ img.draggable-ok { pointer-events: auto; }
     .btn-ghost:hover { @apply bg-white/[0.08] border-white/20; }
   }
 
-  .btn-primary:disabled, .btn-ghost:disabled { @apply opacity-40 pointer-events-none; }
+  .btn-primary:disabled, .btn-ghost:disabled {
+    @apply opacity-40 pointer-events-none;
+  }
 
-  .icon-badge { @apply flex items-center justify-center rounded-full; }
-  .glow-orb { @apply pointer-events-none absolute rounded-full blur-3xl; }
+  .icon-badge {
+    @apply flex items-center justify-center rounded-full;
+  }
+
+  .glow-orb {
+    @apply pointer-events-none absolute rounded-full blur-3xl;
+  }
+
   .stat-mono { @apply font-mono tabular-nums tracking-tight; }
+
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
-}
+  }
