@@ -1,18 +1,29 @@
 import type { Config } from "tailwindcss";
 
+/**
+ * NEXUS DUOS — Design Token System
+ * ---------------------------------
+ * Signature: "Duel Split" — every core screen is built around a seam of
+ * light dividing two competing presences (you / rival). Color and motion
+ * exist to make that seam feel alive, not decorative.
+ */
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        void: "#06060B",
-        surface: "#0F1018",
-        "surface-raised": "#161826",
-        cyan: { DEFAULT: "#00E5FF", dim: "#0A8CA3" },
-        magenta: { DEFAULT: "#FF2E9A", dim: "#9C1A63" },
-        violet: { DEFAULT: "#7C5CFF", dim: "#4B3799" },
-        ember: { DEFAULT: "#FFB454", dim: "#9C7331" },
-        ink: { primary: "#F5F7FF", muted: "#8B93B0", faint: "#4A4F66" },
+        void: "var(--color-void)",
+        surface: "var(--color-surface)",
+        "surface-raised": "var(--color-surface-raised)",
+        cyan: { DEFAULT: "var(--color-cyan)", dim: "var(--color-cyan-dim)" },
+        magenta: { DEFAULT: "var(--color-magenta)", dim: "var(--color-magenta-dim)" },
+        violet: { DEFAULT: "var(--color-violet)", dim: "var(--color-violet-dim)" },
+        ember: { DEFAULT: "var(--color-ember)", dim: "var(--color-ember-dim)" },
+        ink: {
+          primary: "var(--color-ink-primary)",
+          muted: "var(--color-ink-muted)",
+          faint: "var(--color-ink-faint)",
+        },
       },
       fontFamily: {
         display: ["var(--font-display)", "sans-serif"],
@@ -41,10 +52,18 @@ const config: Config = {
       },
       keyframes: {
         "pulse-glow": { "0%, 100%": { opacity: "0.6" }, "50%": { opacity: "1" } },
-        "seam-flicker": { "0%, 100%": { opacity: "0.5" }, "45%": { opacity: "1" }, "50%": { opacity: "0.3" }, "55%": { opacity: "1" } },
+        "seam-flicker": {
+          "0%, 100%": { opacity: "0.5" },
+          "45%": { opacity: "1" },
+          "50%": { opacity: "0.3" },
+          "55%": { opacity: "1" },
+        },
         "rise-in": { from: { opacity: "0", transform: "translateY(12px)" }, to: { opacity: "1", transform: "translateY(0)" } },
         shimmer: { "0%": { backgroundPosition: "-200% 0" }, "100%": { backgroundPosition: "200% 0" } },
-        float: { "0%, 100%": { transform: "translate(0, 0)" }, "50%": { transform: "translate(12px, -18px)" } },
+        float: {
+          "0%, 100%": { transform: "translate(0, 0)" },
+          "50%": { transform: "translate(12px, -18px)" },
+        },
       },
       borderRadius: { card: "1.25rem" },
     },
