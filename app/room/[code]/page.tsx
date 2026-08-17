@@ -6,6 +6,7 @@ import { Check, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
+import { useRoomPhaseStore } from "@/store/useRoomPhaseStore";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { GameVotingPanel } from "@/components/room/GameVotingPanel";
 import { GameDispatcher } from "@/components/room/GameDispatcher";
@@ -16,24 +17,27 @@ interface RoomData {
   id: string; code: string; status: string;
   player1: RoomPlayer; player2?: RoomPlayer | null;
   game?: { key: string; name: string } | null;
+  match_id?: string | null;
 }
 
-// Next.js 14 passes dynamic route params synchronously (not a Promise — that's a Next.js 15 pattern).
+// Next.js 14 passes dynamic route params synchronously (not a Promise).
 export default function RoomPage({ params }: { params: { code: string } }) {
   const { code } = params;
   const { token, user } = useAuthStore();
   const socket = useSocket();
+  const setInGame = useRoomPhaseStore((s) => s.setInGame);
   const [room, setRoom] = useState<RoomData | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [matchId, setMatchId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [opponentReady, setOpponentReady] = useState(false);
 
-  useEffect(() => {
+  function refetch() {
     apiFetch<{ room: RoomData }>(`/rooms/${code}`, { token })
       .then((res) => setRoom(res.room))
       .catch(() => setLoadError(true));
-  }, [code, token]);
+  }
+
+  useEffect(() => { refetch(); }, [code, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!socket) return;
@@ -41,8 +45,7 @@ export default function RoomPage({ params }: { params: { code: string } }) {
 
     function onRoomJoined(data: { room: RoomData }) { setRoom(data.room); }
     function onVoteResolved(data: { match_id: string; game_key: string; game_name: string }) {
-      setRoom((r) => (r ? { ...r, status: "READY_CHECK", game: { key: data.game_key, name: data.game_name } } : r));
-      setMatchId(data.match_id);
+      setRoom((r) => (r ? { ...r, status: "READY_CHECK", game: { key: data.game_key, name: data.game_name }, match_id: data.match_id } : r));
     }
     function onPlayerReady(data: { user_id: string }) {
       if (data.user_id === user?.id) setReady(true);
@@ -68,6 +71,11 @@ export default function RoomPage({ params }: { params: { code: string } }) {
     }
   }, [ready, opponentReady, room, socket]);
 
+  useEffect(() => {
+    setInGame(room?.status === "IN_PROGRESS");
+    return () => setInGame(false);
+  }, [room?.status, setInGame]);
+
   if (loadError) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
@@ -90,7 +98,7 @@ export default function RoomPage({ params }: { params: { code: string } }) {
   const gameMeta = room.game ? getGameMeta(room.game.key) : undefined;
 
   return (
-    <main className="flex min-h-screen flex-col px-5 pb-10 pt-8">
+    <main className="flex min-h-screen flex-col px-5 pb-28 pt-8">
       <header className="mb-6 text-center"><p className="stat-mono text-xs text-violet">{room.code}</p></header>
 
       {room.status !== "IN_PROGRESS" && (
@@ -130,9 +138,9 @@ export default function RoomPage({ params }: { params: { code: string } }) {
           </motion.div>
         )}
 
-        {room.status === "IN_PROGRESS" && matchId && room.game && opponent && (
+        {room.status === "IN_PROGRESS" && room.match_id && room.game && opponent && (
           <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <GameDispatcher gameKey={room.game.key} matchId={matchId} roomCode={room.code} opponentId={opponent.id} />
+            <GameDispatcher gameKey={room.game.key} matchId={room.match_id} roomCode={room.code} opponentId={opponent.id} />
           </motion.div>
         )}
       </AnimatePresence>
