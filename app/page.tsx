@@ -1,17 +1,55 @@
 "use client";
 
+import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Swords, Bot, Trophy, Target, Percent } from "lucide-react";
+import { Swords, Bot, Trophy, Target, Percent, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { GAMES, ACCENT_CLASSES } from "@/lib/games";
+import { apiFetch } from "@/lib/api";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } };
 
 export default function HomePage() {
-  const { user, status } = useAuthStore();
+  const { user, status, token } = useAuthStore();
+  const router = useRouter();
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [startingGame, setStartingGame] = useState<string | null>(null);
+
+  function updateScrollHints() {
+    const el = scrollerRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }
+
+  useEffect(() => {
+    updateScrollHints();
+    window.addEventListener("resize", updateScrollHints);
+    return () => window.removeEventListener("resize", updateScrollHints);
+  }, []);
+
+  function scrollBy(dx: number) {
+    scrollerRef.current?.scrollBy({ left: dx, behavior: "smooth" });
+  }
+
+  async function startQuickDuel(gameKey: string) {
+    if (status !== "authenticated" || startingGame) return;
+    setStartingGame(gameKey);
+    try {
+      const res = await apiFetch<{ room: { code: string } }>("/rooms/quick", {
+        method: "POST", token, body: JSON.stringify({ game_key: gameKey }),
+      });
+      router.push(`/room/${res.room.code}`);
+    } catch {
+      setStartingGame(null);
+    }
+  }
 
   const headline =
     status === "authenticated" ? `Ready, ${user?.first_name ?? "Player"}?`
@@ -38,21 +76,42 @@ export default function HomePage() {
       </motion.div>
 
       <motion.section variants={item} className="mt-10">
-        <h2 className="mb-3 font-display text-sm uppercase tracking-widest text-ink-muted">Games — tap to duel</h2>
+        <h2 className="mb-3 font-display text-sm uppercase tracking-widest text-ink-muted">Games — tap to start a duel</h2>
         <div className="relative">
-          <div className="scrollbar-hide flex gap-3 overflow-x-auto pb-2">
+          <div ref={scrollerRef} onScroll={updateScrollHints} className="scrollbar-hide flex gap-3 overflow-x-auto pb-2">
             {GAMES.map((game) => {
               const Icon = game.icon;
               const c = ACCENT_CLASSES[game.accent];
+              const loading = startingGame === game.key;
               return (
-                <Link key={game.key} href="/find" className={`glass-card flex w-32 shrink-0 flex-col items-start gap-2 border p-4 ${c.border}`}>
-                  <span className={`icon-badge h-9 w-9 ${c.bg}`}><Icon size={18} strokeWidth={2} className={c.text} /></span>
+                <button
+                  key={game.key}
+                  onClick={() => startQuickDuel(game.key)}
+                  disabled={startingGame !== null}
+                  className={`glass-card flex w-32 shrink-0 flex-col items-start gap-2 border p-4 text-left disabled:opacity-60 ${c.border}`}
+                >
+                  <span className={`icon-badge h-9 w-9 ${c.bg}`}>
+                    {loading ? <Loader2 size={16} className={`animate-spin ${c.text}`} /> : <Icon size={18} strokeWidth={2} className={c.text} />}
+                  </span>
                   <p className="font-display text-xs font-semibold leading-tight text-ink-primary">{game.name}</p>
-                </Link>
+                </button>
               );
             })}
           </div>
-          <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-void to-transparent" />
+
+          {canScrollLeft && (
+            <button onClick={() => scrollBy(-140)} className="absolute left-0 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-void/80 text-ink-primary shadow-glass backdrop-blur-glass">
+              <ChevronLeft size={16} />
+            </button>
+          )}
+          {canScrollLeft && <div className="pointer-events-none absolute left-0 top-0 h-full w-10 bg-gradient-to-r from-void to-transparent" />}
+
+          {canScrollRight && (
+            <button onClick={() => scrollBy(140)} className="absolute right-0 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-void/80 text-ink-primary shadow-glass backdrop-blur-glass">
+              <ChevronRight size={16} />
+            </button>
+          )}
+          {canScrollRight && <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-void to-transparent" />}
         </div>
       </motion.section>
 
