@@ -20,6 +20,9 @@ export default function HomePage() {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [startingGame, setStartingGame] = useState<string | null>(null);
+  const [showAuthHint, setShowAuthHint] = useState(false);
+
+  const notReady = status !== "authenticated";
 
   function updateScrollHints() {
     const el = scrollerRef.current;
@@ -39,7 +42,12 @@ export default function HomePage() {
   }
 
   async function startQuickDuel(gameKey: string) {
-    if (status !== "authenticated" || startingGame) return;
+    if (startingGame) return;
+    if (notReady) {
+      setShowAuthHint(true);
+      setTimeout(() => setShowAuthHint(false), 2500);
+      return;
+    }
     setStartingGame(gameKey);
     try {
       const res = await apiFetch<{ room: { code: string } }>("/rooms/quick", {
@@ -58,7 +66,7 @@ export default function HomePage() {
     : "Loading…";
 
   return (
-    <motion.main variants={container} initial="hidden" animate="show" className="flex min-h-screen flex-col px-5 pb-28 pt-8">
+    <motion.main variants={container} initial="hidden" animate="show" className="flex min-h-dvh flex-col px-5 pb-28 pt-8">
       <motion.header variants={item} className="mb-8">
         <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Nexus Duos</p>
         <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">{headline}</h1>
@@ -88,7 +96,7 @@ export default function HomePage() {
                   key={game.key}
                   onClick={() => startQuickDuel(game.key)}
                   disabled={startingGame !== null}
-                  className={`glass-card flex w-32 shrink-0 flex-col items-start gap-2 border p-4 text-left disabled:opacity-60 ${c.border}`}
+                  className={`glass-card shadow-none flex w-32 shrink-0 flex-col items-start gap-2 border p-4 text-left disabled:opacity-60 ${c.border}`}
                 >
                   <span className={`icon-badge h-9 w-9 ${c.bg}`}>
                     {loading ? <Loader2 size={16} className={`animate-spin ${c.text}`} /> : <Icon size={18} strokeWidth={2} className={c.text} />}
@@ -100,19 +108,22 @@ export default function HomePage() {
           </div>
 
           {canScrollLeft && (
-            <button onClick={() => scrollBy(-140)} className="absolute left-0 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-void/80 text-ink-primary shadow-glass backdrop-blur-glass">
+            <button onClick={() => scrollBy(-140)} className="absolute left-0 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-void/80 text-ink-primary shadow-none backdrop-blur-glass">
               <ChevronLeft size={16} />
             </button>
           )}
-          {canScrollLeft && <div className="pointer-events-none absolute left-0 top-0 h-full w-10 bg-gradient-to-r from-void to-transparent" />}
 
           {canScrollRight && (
-            <button onClick={() => scrollBy(140)} className="absolute right-0 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-void/80 text-ink-primary shadow-glass backdrop-blur-glass">
+            <button onClick={() => scrollBy(140)} className="absolute right-0 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-void/80 text-ink-primary shadow-none backdrop-blur-glass">
               <ChevronRight size={16} />
             </button>
           )}
-          {canScrollRight && <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-void to-transparent" />}
         </div>
+        {showAuthHint && (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 text-center text-xs text-ember">
+            Still signing you in — one moment, then try again.
+          </motion.p>
+        )}
       </motion.section>
 
       <motion.section variants={item} className="mt-10">
