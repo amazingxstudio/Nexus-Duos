@@ -1,27 +1,15 @@
+import type { Config } from "tailwindcss";
+
 /**
  * NEXUS DUOS — Design Token System
  * ---------------------------------
  * Signature: "Duel Split" — every core screen is built around a seam of
  * light dividing two competing presences (you / rival). Color and motion
  * exist to make that seam feel alive, not decorative.
- *
- * Colors are driven by CSS variables (see app/globals.css) so the
- * Light/Dark/Adaptive theme switcher can swap the whole palette by toggling
- * one class on <html>. The variables hold unitless "R G B" triplets, and
- * withOpacity() wraps them in rgb(... / <alpha>) so Tailwind's opacity
- * modifiers (bg-cyan/10, border-cyan/30, etc.) keep working correctly.
  */
-function withOpacity(variable: string) {
-  return ({ opacityValue }: { opacityValue?: string }) =>
-    opacityValue === undefined ? `rgb(var(${variable}))` : `rgb(var(${variable}) / ${opacityValue})`;
-}
+const withOpacity = (variable: string) => `rgb(var(${variable}) / <alpha-value>)`;
 
-// Not typed as `Config` on purpose: the withOpacity() function pattern
-// below is Tailwind's own documented way to support CSS-variable colors
-// with opacity modifiers, but the tailwindcss package's TS types don't
-// declare function values as valid — even though Tailwind accepts them
-// fine at runtime. Typing this loosely avoids a false-positive build error.
-const config = {
+const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
