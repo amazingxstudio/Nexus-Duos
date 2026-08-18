@@ -7,18 +7,11 @@ import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { useRoomPhaseStore } from "@/store/useRoomPhaseStore";
+import { useActiveRoomStore, ActiveRoomData } from "@/store/useActiveRoomStore";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { GameVotingPanel } from "@/components/room/GameVotingPanel";
 import { GameDispatcher } from "@/components/room/GameDispatcher";
 import { getGameMeta } from "@/lib/games";
-
-interface RoomPlayer { id: string; photo_url?: string | null; nickname?: string; player_id?: string; }
-interface RoomData {
-  id: string; code: string; status: string;
-  player1: RoomPlayer; player2?: RoomPlayer | null;
-  game?: { key: string; name: string } | null;
-  match_id?: string | null;
-}
 
 // Next.js 14 passes dynamic route params synchronously (not a Promise).
 export default function RoomPage({ params }: { params: { code: string } }) {
@@ -26,68 +19,58 @@ export default function RoomPage({ params }: { params: { code: string } }) {
   const { token, user } = useAuthStore();
   const socket = useSocket();
   const setInGame = useRoomPhaseStore((s) => s.setInGame);
-  const [room, setRoom] = useState<RoomData | null>(null);
+
+  // Room/ready state now lives in the global store (written to by RoomSync,
+  // which is mounted at the app root) instead of local component state —
+  // so switching pages and coming back doesn't lose anything in-flight.
+  const room = useActiveRoomStore((s) => s.room);
+  const ready = useActiveRoomStore((s) => s.ready);
+  const opponentReady = useActiveRoomStore((s) => s.opponentReady);
+  const setRoom = useActiveRoomStore((s) => s.setRoom);
+  const resetRoom = useActiveRoomStore((s) => s.reset);
+  const joinedChannel = useActiveRoomStore((s) => s.joinedChannel);
+  const setJoinedChannel = useActiveRoomStore((s) => s.setJoinedChannel);
+
   const [loadError, setLoadError] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [opponentReady, setOpponentReady] = useState(false);
 
   function refetch() {
-    apiFetch<{ room: RoomData }>(`/rooms/${code}`, { token })
+    apiFetch<{ room: ActiveRoomData }>(`/rooms/${code}`, { token })
       .then((res) => setRoom(res.room))
       .catch(() => setLoadError(true));
   }
 
-  useEffect(() => { refetch(); }, [code, token]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Navigated to a *different* room than the one currently tracked
+  // globally — start fresh instead of flashing stale data from the last one.
+  useEffect(() => {
+    if (room && room.code !== code) resetRoom();
+  }, [code, room, resetRoom]);
+
+  useEffect(() => { setLoadError(false); refetch(); }, [code, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!socket) return;
+    if (joinedChannel === code) return; // already subscribed — don't rejoin on every remount
     socket.emit("room:join_channel", { room_code: code });
-
-    function onRoomJoined(data: { room: RoomData }) { setRoom(data.room); }
-    function onVoteResolved(data: { match_id: string; game_key: string; game_name: string }) {
-      setRoom((r) => (r ? { ...r, status: "READY_CHECK", game: { key: data.game_key, name: data.game_name }, match_id: data.match_id } : r));
-    }
-    function onPlayerReady(data: { user_id: string }) {
-      if (data.user_id === user?.id) setReady(true);
-      else setOpponentReady(true);
-    }
-    function onGameStarted() { setRoom((r) => (r ? { ...r, status: "IN_PROGRESS" } : r)); }
-
-    socket.on("room_joined", onRoomJoined);
-    socket.on("vote:resolved", onVoteResolved);
-    socket.on("player_ready", onPlayerReady);
-    socket.on("game_started", onGameStarted);
-    return () => {
-      socket.off("room_joined", onRoomJoined);
-      socket.off("vote:resolved", onVoteResolved);
-      socket.off("player_ready", onPlayerReady);
-      socket.off("game_started", onGameStarted);
-    };
-  }, [socket, code, user?.id]);
+    setJoinedChannel(code);
+  }, [socket, code, joinedChannel, setJoinedChannel]);
 
   useEffect(() => {
-    if (ready && opponentReady && room?.status === "READY_CHECK") {
-      socket?.emit("game_started", { room_id: room.id });
-    }
-  }, [ready, opponentReady, room, socket]);
-
-  useEffect(() => {
-    setInGame(room?.status === "IN_PROGRESS");
+    setInGame(room?.code === code && room?.status === "IN_PROGRESS");
     return () => setInGame(false);
-  }, [room?.status, setInGame]);
+  }, [room?.status, room?.code, code, setInGame]);
 
   if (loadError) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="text-ink-primary">Couldn&apos;t load this room.</p>
         <p className="text-sm text-ink-muted">It may not exist, or the server is waking up — try again in a moment.</p>
       </main>
     );
   }
 
-  if (!room) {
+  if (!room || room.code !== code) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-3">
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-3">
         <Loader2 className="animate-spin text-cyan" />
         <p className="text-sm text-ink-muted">Loading room…</p>
       </main>
@@ -98,7 +81,7 @@ export default function RoomPage({ params }: { params: { code: string } }) {
   const gameMeta = room.game ? getGameMeta(room.game.key) : undefined;
 
   return (
-    <main className="flex min-h-screen flex-col px-5 pb-28 pt-8">
+    <main className="flex min-h-dvh flex-col px-5 pb-28 pt-8">
       <header className="mb-6 text-center"><p className="stat-mono text-xs text-violet">{room.code}</p></header>
 
       {room.status !== "IN_PROGRESS" && (
