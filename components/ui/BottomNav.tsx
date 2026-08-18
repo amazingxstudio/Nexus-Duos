@@ -3,18 +3,26 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Swords, History, Settings, Info } from "lucide-react";
+import { Home, Swords, History, Settings, User } from "lucide-react";
+import { useRoomPhaseStore } from "@/store/useRoomPhaseStore";
 
 const ITEMS = [
   { href: "/", label: "Home", Icon: Home },
   { href: "/find", label: "Duel", Icon: Swords },
   { href: "/history", label: "History", Icon: History },
   { href: "/settings", label: "Settings", Icon: Settings },
-  { href: "/about", label: "About", Icon: Info },
+  { href: "/profile", label: "Profile", Icon: User },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  // Hidden only while an actual match is being played (room.status === IN_PROGRESS).
+  // Any other game-related screen (voting, ready-check, room lobby, friends, etc.)
+  // keeps the nav visible.
+  const inGame = useRoomPhaseStore((s) => s.inGame);
+
+  if (inGame) return null;
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
       <div className="glass-panel flex w-full max-w-sm items-center justify-between px-2 py-2">
