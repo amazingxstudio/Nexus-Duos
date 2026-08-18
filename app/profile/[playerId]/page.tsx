@@ -25,14 +25,14 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
   }, [playerId, token]);
 
   if (loadError) {
-    return <main className="flex min-h-screen items-center justify-center px-6 text-center"><p className="text-ink-muted">Couldn&apos;t load this profile.</p></main>;
+    return <main className="flex min-h-dvh items-center justify-center px-6 text-center"><p className="text-ink-muted">Couldn&apos;t load this profile.</p></main>;
   }
   if (!profile) {
-    return <main className="flex min-h-screen items-center justify-center"><p className="text-ink-muted">Loading profile…</p></main>;
+    return <main className="flex min-h-dvh items-center justify-center"><p className="text-ink-muted">Loading profile…</p></main>;
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center px-6 pt-12">
+    <main className="flex min-h-dvh flex-col items-center px-6 pt-12">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative">
         <span className="absolute -inset-1.5 rounded-full border border-magenta opacity-40 animate-pulse-glow" />
         <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-magenta shadow-glow-magenta bg-surface-raised bg-cover bg-center" style={profile.photo_url ? { backgroundImage: `url(${profile.photo_url})` } : undefined}>
