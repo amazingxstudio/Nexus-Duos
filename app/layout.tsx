@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script src="https://telegram.org/js/telegram-web-app.js" async />
       </head>
-      <body className="font-body min-h-screen bg-void bg-duel-radial antialiased">
+      <body className="font-body min-h-dvh bg-void bg-duel-radial antialiased">
         <ThemeProvider>
           <AmbientBackground />
           <div className="relative z-10">
