@@ -4,8 +4,9 @@
 
 :root {
   color-scheme: dark;
-  /* Values are unitless "R G B" triplets (not hex) — required so Tailwind
-     can inject alpha for opacity modifiers like bg-cyan/10, border-cyan/30. */
+  /* Values are space-separated RGB triplets (no #, no rgb()) so Tailwind
+     can inject alpha channels for utilities like bg-cyan/30. See
+     tailwind.config.ts where these are wrapped in rgb(var(...) / <alpha-value>). */
   --color-void: 6 6 11;
   --color-surface: 15 16 24;
   --color-surface-raised: 22 24 38;
@@ -42,8 +43,8 @@
 }
 
 html, body {
-  background-color: var(--color-void);
-  color: var(--color-ink-primary);
+  background-color: rgb(var(--color-void));
+  color: rgb(var(--color-ink-primary));
   overscroll-behavior: none;
   height: 100%;
 }
@@ -164,4 +165,6 @@ img.draggable-ok { pointer-events: auto; }
 
   .stat-mono { @apply font-mono tabular-nums tracking-tight; }
 
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
   }
