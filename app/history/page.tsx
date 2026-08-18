@@ -33,7 +33,7 @@ export default function HistoryPage() {
   useEffect(() => { if (token) load(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <main className="min-h-screen px-5 pb-28 pt-8">
+    <main className="min-h-dvh px-5 pb-28 pt-8">
       <h1 className="mb-6 font-display text-2xl font-bold text-ink-primary">Match History</h1>
       {error && (
         <div className="glass-panel flex flex-col items-center gap-3 p-8 text-center">
