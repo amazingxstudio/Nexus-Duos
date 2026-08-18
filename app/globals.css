@@ -164,5 +164,4 @@ img.draggable-ok { pointer-events: auto; }
 
   .stat-mono { @apply font-mono tabular-nums tracking-tight; }
 
-  .scrollbar-hide::-webkit-scrollbar { display: none; }
   }
