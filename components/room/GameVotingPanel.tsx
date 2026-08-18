@@ -74,7 +74,9 @@ export function GameVotingPanel({ roomId }: { roomId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    // Extra bottom padding reserves room for the sticky confirm bar below so the
+    // last row of game cards never sits underneath it.
+    <div className="flex flex-col gap-4 pb-20">
       <div className="text-center">
         <p className="text-sm text-ink-muted">Pick exactly 3 games you&apos;d like to play</p>
         {opponentSubmitted && !submitted && <p className="mt-1 text-xs text-ember">Your rival has already picked — your turn</p>}
@@ -106,9 +108,15 @@ export function GameVotingPanel({ roomId }: { roomId: string }) {
           );
         })}
       </div>
-      <button onClick={submitPicks} disabled={picks.length !== 3 || submitted} className="btn-primary">
-        {submitted ? "Waiting for opponent…" : `Confirm Picks (${picks.length}/3)`}
-      </button>
+
+      {/* Sticky, not fixed: stays pinned to the bottom of the scroll area (well
+          clear of the bottom nav) no matter how tall the grid is or how a mobile
+          browser's address bar affects real viewport height. */}
+      <div className="sticky bottom-24 z-40 -mx-5 mt-2 px-5">
+        <button onClick={submitPicks} disabled={picks.length !== 3 || submitted} className="btn-primary w-full shadow-glass">
+          {submitted ? "Waiting for opponent…" : `Confirm Picks (${picks.length}/3)`}
+        </button>
+      </div>
     </div>
   );
 }
