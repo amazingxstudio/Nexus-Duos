@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameMatch } from "@/games/engine/useGameMatch";
+import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
@@ -30,7 +31,7 @@ export function CyberDuelGame({ matchId, roomCode, opponentId }: { matchId: stri
 
   function hit(targetId: string) { sendAction("target_hit", { target_id: targetId }); }
 
-  if (!payload) return <p className="text-ink-muted">Waiting for match to start…</p>;
+  if (!payload) return <LoadingProgress label="Waiting for match to start…" />;
   const myScore = userId ? (scores[userId] ?? 0) : 0;
   const opponentScore = scores[opponentId] ?? 0;
 
