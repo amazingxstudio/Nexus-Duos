@@ -17,6 +17,12 @@ export interface ActiveRoomData {
   match_id?: string | null;
 }
 
+export interface PendingMatchStart {
+  match_id: string;
+  payload: Record<string, unknown>;
+  duration_ms: number;
+}
+
 interface ActiveRoomState {
   room: ActiveRoomData | null;
   ready: boolean;
@@ -24,11 +30,25 @@ interface ActiveRoomState {
   /** Room code the socket has already joined the channel for — avoids
    *  re-emitting "room:join_channel" on every remount of the room page. */
   joinedChannel: string | null;
+  /**
+   * The most recent "game_started" (match state) broadcast, captured the
+   * instant it arrives — before the game screen has necessarily mounted to
+   * listen for it itself. That broadcast fires only once per match, and it
+   * used to race the game component's own mount (RoomSync always catches it
+   * first since it's mounted at the app root; by the time React finishes
+   * swapping the room view to the game screen and useGameMatch registers
+   * its own listener, the one-time event had already come and gone,
+   * leaving the game stuck on "Waiting for match to start..." forever).
+   * useGameMatch checks this on mount and consumes it if present, falling
+   * back to a live listener otherwise.
+   */
+  pendingMatchStart: PendingMatchStart | null;
   setRoom: (room: ActiveRoomData | null) => void;
   patchRoom: (patch: Partial<ActiveRoomData>) => void;
   setReady: (v: boolean) => void;
   setOpponentReady: (v: boolean) => void;
   setJoinedChannel: (code: string | null) => void;
+  setPendingMatchStart: (v: PendingMatchStart | null) => void;
   reset: () => void;
 }
 
@@ -45,10 +65,12 @@ export const useActiveRoomStore = create<ActiveRoomState>((set) => ({
   ready: false,
   opponentReady: false,
   joinedChannel: null,
+  pendingMatchStart: null,
   setRoom: (room) => set({ room }),
   patchRoom: (patch) => set((s) => (s.room ? { room: { ...s.room, ...patch } } : s)),
   setReady: (v) => set({ ready: v }),
   setOpponentReady: (v) => set({ opponentReady: v }),
   setJoinedChannel: (code) => set({ joinedChannel: code }),
-  reset: () => set({ room: null, ready: false, opponentReady: false, joinedChannel: null }),
+  setPendingMatchStart: (v) => set({ pendingMatchStart: v }),
+  reset: () => set({ room: null, ready: false, opponentReady: false, joinedChannel: null, pendingMatchStart: null }),
 }));
