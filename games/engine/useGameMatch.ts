@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useSocket } from "@/components/providers/SocketProvider";
+import { useActiveRoomStore } from "@/store/useActiveRoomStore";
 
 export interface MatchFinishResult {
   match_id: string;
@@ -23,6 +24,22 @@ export function useGameMatch({ matchId, roomCode }: UseGameMatchOptions) {
   const [result, setResult] = useState<MatchFinishResult | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const joinedRef = useRef(false);
+
+  // The "game_started" broadcast fires exactly once, right as the match
+  // begins — often before this component (and this effect) has even
+  // mounted, since RoomSync (mounted at the app root) is what triggers the
+  // room-status flip that causes this screen to render in the first place.
+  // If RoomSync already caught that broadcast, consume it here instead of
+  // waiting for an event that already happened and won't come again.
+  useEffect(() => {
+    const pending = useActiveRoomStore.getState().pendingMatchStart;
+    if (pending && pending.match_id === matchId) {
+      setPayload(pending.payload);
+      setRemainingMs(pending.duration_ms);
+      setStatus("active");
+      useActiveRoomStore.getState().setPendingMatchStart(null);
+    }
+  }, [matchId]);
 
   useEffect(() => {
     if (!socket) return;
