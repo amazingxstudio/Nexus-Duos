@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { useRoomPhaseStore } from "@/store/useRoomPhaseStore";
 import { useActiveRoomStore, ActiveRoomData } from "@/store/useActiveRoomStore";
 import { PlayerCard } from "@/components/ui/PlayerCard";
+import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameVotingPanel } from "@/components/room/GameVotingPanel";
 import { GameDispatcher } from "@/components/room/GameDispatcher";
 import { getGameMeta } from "@/lib/games";
@@ -70,9 +71,8 @@ export default function RoomPage({ params }: { params: { code: string } }) {
 
   if (!room || room.code !== code) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-3">
-        <Loader2 className="animate-spin text-cyan" />
-        <p className="text-sm text-ink-muted">Loading room…</p>
+      <main className="flex min-h-dvh flex-col items-center justify-center">
+        <LoadingProgress label="Loading room…" />
       </main>
     );
   }
@@ -94,9 +94,8 @@ export default function RoomPage({ params }: { params: { code: string } }) {
 
       <AnimatePresence mode="wait">
         {room.status === "WAITING_FOR_PLAYER" && (
-          <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="glass-panel flex flex-col items-center gap-2 p-6 text-center">
-            <Loader2 className="animate-spin text-cyan" size={20} />
-            <p className="text-ink-muted">Waiting for an opponent to join with this room code…</p>
+          <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="glass-panel flex flex-col items-center p-6 text-center">
+            <LoadingProgress label="Waiting for an opponent to join with this room code…" />
           </motion.div>
         )}
 
@@ -114,10 +113,14 @@ export default function RoomPage({ params }: { params: { code: string } }) {
                 <span className="text-ink-primary">{gameMeta.name}</span>
               </div>
             )}
-            <button onClick={() => socket?.emit("player_ready", { room_id: room.id })} disabled={ready} className="btn-primary">
-              {ready ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={2.5} />}
-              {ready ? "Waiting for opponent…" : "I'm Ready"}
-            </button>
+            {ready ? (
+              <LoadingProgress label="Waiting for opponent…" />
+            ) : (
+              <button onClick={() => socket?.emit("player_ready", { room_id: room.id })} className="btn-primary">
+                <Check size={16} strokeWidth={2.5} />
+                I&apos;m Ready
+              </button>
+            )}
           </motion.div>
         )}
 
