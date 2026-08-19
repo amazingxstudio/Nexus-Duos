@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Swords, Bot, Trophy, Target, Percent, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Swords, Bot, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { GAMES, ACCENT_CLASSES } from "@/lib/games";
@@ -21,6 +21,7 @@ export default function HomePage() {
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [startingGame, setStartingGame] = useState<string | null>(null);
   const [showAuthHint, setShowAuthHint] = useState(false);
+  const [gameError, setGameError] = useState<string | null>(null);
 
   const notReady = status !== "authenticated";
 
@@ -49,12 +50,18 @@ export default function HomePage() {
       return;
     }
     setStartingGame(gameKey);
+    setGameError(null);
     try {
       const res = await apiFetch<{ room: { code: string } }>("/rooms/quick", {
         method: "POST", token, body: JSON.stringify({ game_key: gameKey }),
       });
       router.push(`/room/${res.room.code}`);
-    } catch {
+    } catch (err) {
+      // Surface the failure instead of silently resetting — a network/CORS
+      // error here previously left the button looking like it just did
+      // nothing, which made a backend-connectivity problem look like a
+      // frontend bug.
+      setGameError(err instanceof Error ? err.message : "Couldn't create the room");
       setStartingGame(null);
     }
   }
@@ -67,9 +74,14 @@ export default function HomePage() {
 
   return (
     <motion.main variants={container} initial="hidden" animate="show" className="flex min-h-dvh flex-col px-5 pb-28 pt-8">
-      <motion.header variants={item} className="mb-8">
-        <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Nexus Duos</p>
-        <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">{headline}</h1>
+      <motion.header variants={item} className="mb-8 flex items-start justify-between gap-3">
+        <div>
+          <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Nexus Duos</p>
+          <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">{headline}</h1>
+        </div>
+        <Link href="/friends" className="icon-badge h-10 w-10 glass-panel shrink-0" aria-label="Friends">
+          <Users size={18} className="text-ink-muted" />
+        </Link>
       </motion.header>
 
       <motion.section variants={item} className="glass-panel flex items-stretch p-1">
@@ -124,33 +136,14 @@ export default function HomePage() {
             Still signing you in — one moment, then try again.
           </motion.p>
         )}
-      </motion.section>
-
-      <motion.section variants={item} className="mt-10">
-        <h2 className="mb-3 font-display text-sm uppercase tracking-widest text-ink-muted">Your Stats</h2>
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard icon={Target} label="Matches" value={user?.profile?.total_matches ?? 0} />
-          <StatCard icon={Percent} label="Win Rate" value={`${winRate(user?.profile)}%`} />
-          <StatCard icon={Trophy} label="Score" value={user?.profile?.total_score ?? 0} />
-        </div>
+        {gameError && (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 text-center text-xs text-magenta">
+            {gameError} — check your connection and try again.
+          </motion.p>
+        )}
       </motion.section>
 
       {status === "error" && <motion.p variants={item} className="mt-8 text-center text-xs text-ink-faint">Open this app from inside Telegram to sign in.</motion.p>}
     </motion.main>
   );
-}
-
-function StatCard({ icon: Icon, label, value }: { icon: typeof Target; label: string; value: string | number }) {
-  return (
-    <div className="glass-panel flex flex-col items-center gap-1.5 p-4 text-center">
-      <Icon size={16} strokeWidth={2} className="text-ink-muted" />
-      <p className="stat-mono text-xl font-semibold text-ink-primary">{value}</p>
-      <p className="text-[10px] uppercase tracking-wide text-ink-muted">{label}</p>
-    </div>
-  );
-}
-
-function winRate(profile?: { wins: number; total_matches: number }) {
-  if (!profile || profile.total_matches === 0) return 0;
-  return Math.round((profile.wins / profile.total_matches) * 100);
 }
