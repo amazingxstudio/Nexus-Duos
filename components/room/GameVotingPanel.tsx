@@ -7,6 +7,7 @@ import { useSocket } from "@/components/providers/SocketProvider";
 import { GAMES, getGameMeta, ACCENT_CLASSES } from "@/lib/games";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
+import { LoadingProgress } from "@/components/ui/LoadingProgress";
 
 export function GameVotingPanel({ roomId }: { roomId: string }) {
   const socket = useSocket();
@@ -15,6 +16,7 @@ export function GameVotingPanel({ roomId }: { roomId: string }) {
   const [tieBreakCandidates, setTieBreakCandidates] = useState<string[] | null>(null);
   const [tieBreakVoted, setTieBreakVoted] = useState(false);
   const [opponentSubmitted, setOpponentSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -40,14 +42,28 @@ export function GameVotingPanel({ roomId }: { roomId: string }) {
   async function submitPicks() {
     if (picks.length !== 3) return;
     setSubmitted(true);
-    const token = useAuthStore.getState().token;
-    await apiFetch(`/rooms/${roomId}/vote/picks`, { method: "POST", token, body: JSON.stringify({ picks }) });
+    setError(null);
+    try {
+      const token = useAuthStore.getState().token;
+      await apiFetch(`/rooms/${roomId}/vote/picks`, { method: "POST", token, body: JSON.stringify({ picks }) });
+    } catch (err) {
+      // A failed submission used to leave the button stuck on "Waiting for
+      // opponent..." forever with no visible error — never again.
+      setSubmitted(false);
+      setError(err instanceof Error ? err.message : "Couldn't submit your picks — try again.");
+    }
   }
 
   async function submitTieBreak(gameKey: string) {
     setTieBreakVoted(true);
-    const token = useAuthStore.getState().token;
-    await apiFetch(`/rooms/${roomId}/vote/tiebreak`, { method: "POST", token, body: JSON.stringify({ game_key: gameKey }) });
+    setError(null);
+    try {
+      const token = useAuthStore.getState().token;
+      await apiFetch(`/rooms/${roomId}/vote/tiebreak`, { method: "POST", token, body: JSON.stringify({ game_key: gameKey }) });
+    } catch (err) {
+      setTieBreakVoted(false);
+      setError(err instanceof Error ? err.message : "Couldn't submit your vote — try again.");
+    }
   }
 
   if (tieBreakCandidates) {
@@ -68,7 +84,8 @@ export function GameVotingPanel({ roomId }: { roomId: string }) {
             );
           })}
         </div>
-        {tieBreakVoted && <p className="text-center text-sm text-cyan">Vote submitted — waiting on opponent…</p>}
+        {tieBreakVoted && <LoadingProgress label="Waiting for opponent…" />}
+        {error && <p className="text-center text-xs text-magenta">{error}</p>}
       </div>
     );
   }
@@ -108,6 +125,12 @@ export function GameVotingPanel({ roomId }: { roomId: string }) {
           );
         })}
       </div>
+
+      {submitted ? (
+        <LoadingProgress label="Waiting for opponent…" />
+      ) : (
+        error && <p className="text-center text-xs text-magenta">{error}</p>
+      )}
 
       {/* Sticky, not fixed: stays pinned to the bottom of the scroll area (well
           clear of the bottom nav) no matter how tall the grid is or how a mobile
