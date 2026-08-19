@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useGameMatch } from "@/games/engine/useGameMatch";
+import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
@@ -15,7 +16,7 @@ export function NeonChessGame({ matchId, roomCode, opponentId }: { matchId: stri
   const { payload, scores, remainingMs, sendAction, status, opponentDisconnected, result } = useGameMatch({ matchId, roomCode });
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
 
-  if (!payload) return <p className="text-ink-muted">Waiting for match to start…</p>;
+  if (!payload) return <LoadingProgress label="Waiting for match to start…" />;
 
   const boardSize = payload.board_size as number;
   const units = (payload.units as Unit[]) ?? [];
