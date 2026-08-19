@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useGameMatch } from "@/games/engine/useGameMatch";
+import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
@@ -13,7 +14,7 @@ export function SpeedTypingGame({ matchId, roomCode, opponentId }: { matchId: st
   const { payload, scores, remainingMs, sendAction, status, opponentDisconnected, result } = useGameMatch({ matchId, roomCode });
   const [typed, setTyped] = useState("");
 
-  if (!payload) return <p className="text-ink-muted">Waiting for match to start…</p>;
+  if (!payload) return <LoadingProgress label="Waiting for match to start…" />;
   const sentence = (payload.sentence as string) ?? "";
 
   function handleChange(value: string) {
