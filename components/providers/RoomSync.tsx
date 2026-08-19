@@ -11,7 +11,9 @@ import { useAuthStore } from "@/store/useAuthStore";
  * an in-progress room — join, vote resolution, ready checks, game start —
  * and writes results into the global active-room store instead of local
  * page state. That's what makes a create/join/ready-check flow keep going
- * in the background no matter which screen the player is currently on.
+ * in the background no matter which screen the player is currently on, and
+ * — via pendingMatchStart — what stops the one-time "game_started" match
+ * payload from being lost to a mount-order race with the game screen.
  */
 export function RoomSync() {
   const socket = useSocket();
@@ -19,6 +21,7 @@ export function RoomSync() {
   const patchRoom = useActiveRoomStore((s) => s.patchRoom);
   const setReady = useActiveRoomStore((s) => s.setReady);
   const setOpponentReady = useActiveRoomStore((s) => s.setOpponentReady);
+  const setPendingMatchStart = useActiveRoomStore((s) => s.setPendingMatchStart);
   const ready = useActiveRoomStore((s) => s.ready);
   const opponentReady = useActiveRoomStore((s) => s.opponentReady);
   const room = useActiveRoomStore((s) => s.room);
@@ -38,8 +41,12 @@ export function RoomSync() {
       if (data.user_id === myId) setReady(true);
       else setOpponentReady(true);
     }
-    function onGameStarted() {
+    function onGameStarted(data: { match_id: string; payload: Record<string, unknown>; duration_ms: number }) {
       patchRoom({ status: "IN_PROGRESS" });
+      // Capture the payload now, in case the game screen hasn't mounted
+      // (and therefore hasn't registered its own listener) by the time
+      // this arrives — see the store's pendingMatchStart doc comment.
+      setPendingMatchStart({ match_id: data.match_id, payload: data.payload, duration_ms: data.duration_ms });
     }
 
     socket.on("room_joined", onRoomJoined);
@@ -52,7 +59,7 @@ export function RoomSync() {
       socket.off("player_ready", onPlayerReady);
       socket.off("game_started", onGameStarted);
     };
-  }, [socket, setRoom, patchRoom, setReady, setOpponentReady]);
+  }, [socket, setRoom, patchRoom, setReady, setOpponentReady, setPendingMatchStart]);
 
   // Once both sides are ready, tell the server to start — exactly once per
   // match, regardless of which page (if any) happens to be on screen when
