@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Sword, Shield } from "lucide-react";
 import { useGameMatch } from "@/games/engine/useGameMatch";
+import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
@@ -23,7 +24,7 @@ export function ArenaCardsGame({ matchId, roomCode, opponentId }: { matchId: str
     return () => clearInterval(interval);
   }, [status, sendAction]);
 
-  if (!payload) return <p className="text-ink-muted">Waiting for match to start…</p>;
+  if (!payload) return <LoadingProgress label="Waiting for match to start…" />;
 
   const cardPool = payload.card_pool as Card[];
   const battle = payload.battle as Record<string, PlayerBattleState>;
