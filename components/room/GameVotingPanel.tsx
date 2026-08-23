@@ -32,6 +32,8 @@ export function GameVotingPanel({ roomId }: { roomId: string }) {
 
   function togglePick(key: string) {
     if (submitted) return;
+    const meta = getGameMeta(key);
+    if (meta?.comingSoon) return; // not selectable yet — see lib/games.ts
     setPicks((prev) => {
       if (prev.includes(key)) return prev.filter((k) => k !== key);
       if (prev.length >= 3) return prev;
@@ -106,15 +108,18 @@ export function GameVotingPanel({ roomId }: { roomId: string }) {
           return (
             <motion.button
               key={game.key}
-              whileTap={{ scale: 0.96 }}
+              whileTap={game.comingSoon ? undefined : { scale: 0.96 }}
               onClick={() => togglePick(game.key)}
-              disabled={submitted}
+              disabled={submitted || game.comingSoon}
               className={`glass-card relative flex flex-col items-start gap-2 border p-4 text-left disabled:opacity-50 ${selected ? `${c.border} ${c.glow}` : "border-white/[0.08]"}`}
             >
               {selected && (
                 <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className={`icon-badge absolute right-3 top-3 h-5 w-5 ${c.bg}`}>
                   <Check size={12} strokeWidth={3} className={c.text} />
                 </motion.span>
+              )}
+              {game.comingSoon && (
+                <span className="absolute right-3 top-3 rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink-muted">Soon</span>
               )}
               <span className={`icon-badge h-9 w-9 ${c.bg}`}><Icon size={18} strokeWidth={2} className={c.text} /></span>
               <div>
