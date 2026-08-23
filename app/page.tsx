@@ -42,8 +42,8 @@ export default function HomePage() {
     scrollerRef.current?.scrollBy({ left: dx, behavior: "smooth" });
   }
 
-  async function startQuickDuel(gameKey: string) {
-    if (startingGame) return;
+  async function startQuickDuel(gameKey: string, comingSoon?: boolean) {
+    if (startingGame || comingSoon) return;
     if (notReady) {
       setShowAuthHint(true);
       setTimeout(() => setShowAuthHint(false), 2500);
@@ -106,10 +106,13 @@ export default function HomePage() {
               return (
                 <button
                   key={game.key}
-                  onClick={() => startQuickDuel(game.key)}
-                  disabled={startingGame !== null}
-                  className={`glass-card shadow-none flex w-32 shrink-0 flex-col items-start gap-2 border p-4 text-left disabled:opacity-60 ${c.border}`}
+                  onClick={() => startQuickDuel(game.key, game.comingSoon)}
+                  disabled={startingGame !== null || game.comingSoon}
+                  className={`glass-card shadow-none relative flex w-32 shrink-0 flex-col items-start gap-2 border p-4 text-left disabled:opacity-60 ${c.border}`}
                 >
+                  {game.comingSoon && (
+                    <span className="absolute right-2 top-2 rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink-muted">Soon</span>
+                  )}
                   <span className={`icon-badge h-9 w-9 ${c.bg}`}>
                     {loading ? <Loader2 size={16} className={`animate-spin ${c.text}`} /> : <Icon size={18} strokeWidth={2} className={c.text} />}
                   </span>
@@ -146,4 +149,4 @@ export default function HomePage() {
       {status === "error" && <motion.p variants={item} className="mt-8 text-center text-xs text-ink-faint">Open this app from inside Telegram to sign in.</motion.p>}
     </motion.main>
   );
-}
+          }
