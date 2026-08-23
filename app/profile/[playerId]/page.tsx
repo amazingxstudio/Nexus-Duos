@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { User, Trophy, Percent, Target, Lock } from "lucide-react";
+import { User, Trophy, Percent, Target, Lock, Bot } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
+import { getGameMeta } from "@/lib/games";
 
 interface PublicProfile {
   nickname: string; player_id: string; photo_url?: string | null;
@@ -12,17 +14,32 @@ interface PublicProfile {
   win_rate: number; total_score: number; history_visible: boolean;
 }
 
+interface MatchEntry {
+  id: string; game: string; game_key: string; mode: string; date: string;
+  self: { nickname: string; score: number };
+  opponent: { nickname: string; player_id?: string; score: number };
+  result: "WIN" | "LOSS" | "DRAW" | null;
+}
+
 export default function OpponentProfilePage({ params }: { params: { playerId: string } }) {
   const { playerId } = params;
   const token = useAuthStore((s) => s.token);
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [matches, setMatches] = useState<MatchEntry[] | null>(null);
 
   useEffect(() => {
     apiFetch<PublicProfile>(`/profile/${playerId}`, { token })
       .then(setProfile)
       .catch(() => setLoadError(true));
   }, [playerId, token]);
+
+  useEffect(() => {
+    if (!profile?.history_visible) return;
+    apiFetch<{ matches: MatchEntry[]; hidden: boolean }>(`/history/${playerId}`, { token })
+      .then((res) => setMatches(res.matches))
+      .catch(() => setMatches([]));
+  }, [profile?.history_visible, playerId, token]);
 
   if (loadError) {
     return <main className="flex min-h-dvh items-center justify-center px-6 text-center"><p className="text-ink-muted">Couldn&apos;t load this profile.</p></main>;
@@ -32,7 +49,7 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center px-6 pt-12">
+    <main className="flex min-h-dvh flex-col items-center px-6 pb-28 pt-12">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative">
         <span className="absolute -inset-1.5 rounded-full border border-magenta opacity-40 animate-pulse-glow" />
         <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-magenta shadow-glow-magenta bg-surface-raised bg-cover bg-center" style={profile.photo_url ? { backgroundImage: `url(${profile.photo_url})` } : undefined}>
@@ -51,11 +68,42 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
         <p className="text-magenta">{profile.losses} L</p>
         <p className="text-ink-muted">{profile.draws} D</p>
       </div>
-      {!profile.history_visible && (
-        <div className="mt-8 flex items-center gap-2 text-center text-xs text-ink-muted">
-          <Lock size={12} />This player only shares match history with people they&apos;ve played.
+
+      <div className="mt-10 w-full max-w-sm">
+        <h2 className="mb-3 font-display text-sm uppercase tracking-widest text-ink-muted">Recent Matches</h2>
+
+        {!profile.history_visible && (
+          <div className="glass-panel flex items-center gap-2 p-6 text-center text-xs text-ink-muted">
+            <Lock size={12} className="shrink-0" />This player has made their match history private.
+          </div>
+        )}
+
+        {profile.history_visible && matches === null && (
+          <div className="flex flex-col gap-2">{[0, 1].map((i) => <div key={i} className="glass-panel h-16 animate-pulse-glow p-4" />)}</div>
+        )}
+
+        {profile.history_visible && matches?.length === 0 && (
+          <div className="glass-panel p-6 text-center text-xs text-ink-muted">No matches yet.</div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          {matches?.map((m, i) => {
+            const meta = getGameMeta(m.game_key);
+            const Icon = meta?.icon;
+            const resultColor = m.result === "WIN" ? "text-cyan" : m.result === "LOSS" ? "text-magenta" : "text-ink-muted";
+            return (
+              <motion.div key={m.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="glass-panel flex items-center gap-3 p-3">
+                {Icon && <span className="icon-badge h-9 w-9 shrink-0 bg-white/5"><Icon size={16} className="text-ink-muted" /></span>}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink-primary">{m.game}</p>
+                  {m.opponent.player_id ? <Link href={`/profile/${m.opponent.player_id}`} className="text-xs text-violet">vs {m.opponent.nickname}</Link> : <p className="flex items-center gap-1 text-xs text-ink-muted"><Bot size={11} /> vs AI</p>}
+                </div>
+                <p className={`stat-mono text-xs font-semibold uppercase ${resultColor}`}>{m.result ?? "—"}</p>
+              </motion.div>
+            );
+          })}
         </div>
-      )}
+      </div>
     </main>
   );
 }
