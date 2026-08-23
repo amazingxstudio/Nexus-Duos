@@ -9,6 +9,16 @@ import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
 
 const DURATION_MS = 6 * 60_000;
 
+// Critical layout/sizing is done with inline styles rather than Tailwind
+// utility classes. Those classes only exist in the compiled CSS if
+// Tailwind's content scanner sees them in a scanned file — game boards live
+// under /games/, and one missing folder in tailwind.config.ts's content
+// list previously meant every such class here was silently dropped,
+// collapsing the whole board to nothing visible. Inline styles always
+// work regardless of that.
+const DOT = 10;
+const CELL = 40;
+
 export function DotsAndBoxesGame({ matchId, roomCode, opponentId }: { matchId: string; roomCode: string; opponentId: string }) {
   const userId = useAuthStore((s) => s.user?.id);
   const { payload, scores, remainingMs, sendAction, status, opponentDisconnected, result } = useGameMatch({ matchId, roomCode });
@@ -30,21 +40,38 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId }: { matchId: s
   }
 
   const gridDim = dots * 2 - 1;
+  const trackSizes = Array.from({ length: gridDim }, (_, i) => (i % 2 === 0 ? DOT : CELL));
+  const totalSize = trackSizes.reduce((a, b) => a + b, 0);
   const myScore = userId ? (scores[userId] ?? 0) : 0;
   const opponentScore = scores[opponentId] ?? 0;
 
   return (
     <>
       <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected}>
-        <div className="w-full max-w-xs">
-          <p className={`mb-3 text-center text-xs font-semibold uppercase tracking-widest ${myTurn ? "text-cyan" : "text-ink-muted"}`}>{myTurn ? "Your move" : "Rival's move"}</p>
-          <div
-            className="mx-auto grid rounded-card border border-white/10 bg-surface p-3"
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <p
             style={{
-              gridTemplateColumns: Array.from({ length: gridDim }, (_, i) => (i % 2 === 0 ? "10px" : "1fr")).join(" "),
-              gridTemplateRows: Array.from({ length: gridDim }, (_, i) => (i % 2 === 0 ? "10px" : "1fr")).join(" "),
-              width: "100%",
-              aspectRatio: "1",
+              fontSize: 12,
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: myTurn ? "rgb(var(--color-cyan))" : "rgb(var(--color-ink-muted))",
+            }}
+          >
+            {myTurn ? "Your move" : "Rival's move"}
+          </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: trackSizes.map((s) => `${s}px`).join(" "),
+              gridTemplateRows: trackSizes.map((s) => `${s}px`).join(" "),
+              width: totalSize + 24,
+              height: totalSize + 24,
+              padding: 12,
+              borderRadius: 16,
+              border: "1px solid rgb(var(--color-ink-primary) / 0.1)",
+              background: "rgb(var(--color-surface))",
             }}
           >
             {Array.from({ length: gridDim }).map((_, gr) =>
@@ -52,23 +79,54 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId }: { matchId: s
                 const isDotRow = gr % 2 === 0;
                 const isDotCol = gc % 2 === 0;
                 const key = `${gr}-${gc}`;
+                const cellStyle = { gridRow: gr + 1, gridColumn: gc + 1 } as const;
 
                 if (isDotRow && isDotCol) {
-                  return <div key={key} style={{ gridRow: gr + 1, gridColumn: gc + 1 }} className="h-2.5 w-2.5 justify-self-center self-center rounded-full bg-white/40" />;
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        ...cellStyle,
+                        justifySelf: "center",
+                        alignSelf: "center",
+                        width: DOT - 2,
+                        height: DOT - 2,
+                        borderRadius: "50%",
+                        background: "rgb(var(--color-ink-primary) / 0.45)",
+                      }}
+                    />
+                  );
                 }
 
                 if (isDotRow && !isDotCol) {
                   const row = gr / 2, col = (gc - 1) / 2;
                   const owner = hLines[row][col];
+                  const clickable = myTurn && owner === null;
                   return (
                     <button
                       key={key}
                       onClick={() => drawLine("h", row, col)}
-                      disabled={owner !== null || !myTurn}
-                      style={{ gridRow: gr + 1, gridColumn: gc + 1 }}
-                      className="flex h-3 items-center self-center px-0.5"
+                      disabled={!clickable}
+                      style={{
+                        ...cellStyle,
+                        alignSelf: "center",
+                        width: "100%",
+                        height: 16,
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        cursor: clickable ? "pointer" : "default",
+                      }}
                     >
-                      <span className={`h-1 w-full rounded-full transition-colors ${owner ? (owner === userId ? "bg-cyan" : "bg-magenta") : "bg-white/10 active:bg-white/25"}`} />
+                      <span
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          height: 4,
+                          borderRadius: 999,
+                          background: owner ? `rgb(var(--color-${owner === userId ? "cyan" : "magenta"}))` : "rgb(var(--color-ink-primary) / 0.12)",
+                        }}
+                      />
                     </button>
                   );
                 }
@@ -76,15 +134,32 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId }: { matchId: s
                 if (!isDotRow && isDotCol) {
                   const row = (gr - 1) / 2, col = gc / 2;
                   const owner = vLines[row][col];
+                  const clickable = myTurn && owner === null;
                   return (
                     <button
                       key={key}
                       onClick={() => drawLine("v", row, col)}
-                      disabled={owner !== null || !myTurn}
-                      style={{ gridRow: gr + 1, gridColumn: gc + 1 }}
-                      className="flex w-3 justify-center self-stretch py-0.5"
+                      disabled={!clickable}
+                      style={{
+                        ...cellStyle,
+                        justifySelf: "center",
+                        width: 16,
+                        height: "100%",
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        cursor: clickable ? "pointer" : "default",
+                      }}
                     >
-                      <span className={`h-full w-1 rounded-full transition-colors ${owner ? (owner === userId ? "bg-cyan" : "bg-magenta") : "bg-white/10 active:bg-white/25"}`} />
+                      <span
+                        style={{
+                          display: "block",
+                          width: 4,
+                          height: "100%",
+                          borderRadius: 999,
+                          background: owner ? `rgb(var(--color-${owner === userId ? "cyan" : "magenta"}))` : "rgb(var(--color-ink-primary) / 0.12)",
+                        }}
+                      />
                     </button>
                   );
                 }
@@ -97,8 +172,13 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId }: { matchId: s
                     initial={false}
                     animate={{ opacity: owner ? 1 : 0, scale: owner ? 1 : 0.7 }}
                     transition={{ type: "spring", stiffness: 300, damping: 24 }}
-                    style={{ gridRow: gr + 1, gridColumn: gc + 1 }}
-                    className={`self-stretch justify-self-stretch rounded-sm ${owner === userId ? "bg-cyan/25" : owner ? "bg-magenta/25" : ""}`}
+                    style={{
+                      ...cellStyle,
+                      alignSelf: "stretch",
+                      justifySelf: "stretch",
+                      borderRadius: 4,
+                      background: owner ? `rgb(var(--color-${owner === userId ? "cyan" : "magenta"}) / 0.22)` : "transparent",
+                    }}
                   />
                 );
               })
