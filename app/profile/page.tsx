@@ -138,7 +138,7 @@ export default function MyProfilePage() {
                   <p className="stat-mono text-sm text-ink-primary">@aung_myat_minn</p>
                 </a>
                 <a href="mailto:aungmyatminnx@gmail.com" className="glass-card flex items-center gap-3 border border-white/[0.08] p-3">
-                  <span className="icon-badge h-9 w-9 bg-magenta/10 text-magenta"><MailIcon /></span>
+                  <span className="icon-badge h-9 w-9 bg-cyan/10 text-cyan"><MailIcon /></span>
                   <p className="stat-mono text-sm text-ink-primary">aungmyatminnx@gmail.com</p>
                 </a>
               </div>
