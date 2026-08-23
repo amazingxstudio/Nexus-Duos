@@ -4,6 +4,7 @@ import { TelegramProvider } from "./TelegramProvider";
 import { SocketProvider } from "./SocketProvider";
 import { InviteListener } from "./InviteListener";
 import { RoomSync } from "./RoomSync";
+import { ActiveRoomFloatingButton } from "@/components/ui/ActiveRoomFloatingButton";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <RoomSync />
         {children}
         <InviteListener />
+        <ActiveRoomFloatingButton />
       </SocketProvider>
     </TelegramProvider>
   );
