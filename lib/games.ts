@@ -1,4 +1,4 @@
-import { Target, Swords, Lock, Layers, Brain, Keyboard, Flag, Puzzle, LucideIcon } from "lucide-react";
+import { Target, Grid3x3, Calculator, Keyboard, HelpCircle, Brain, ScanSearch, Link2, LucideIcon } from "lucide-react";
 
 export interface GameMeta {
   key: string;
@@ -6,17 +6,26 @@ export interface GameMeta {
   description: string;
   icon: LucideIcon;
   accent: "cyan" | "magenta" | "violet" | "ember";
+  /** True while this game's real rules aren't built yet — selection UIs
+   * (home page tap grid, voting panel) show it but disable picking it.
+   * Flip this to false the same batch its engine.py/*Game.tsx get replaced
+   * with the real implementation; nothing else in this file changes. */
+  comingSoon?: boolean;
 }
 
+// The final lineup — all 8 slots from day one, matching GameKey in the
+// backend one-for-one. A game not built yet stays listed (comingSoon: true)
+// rather than disappearing, so the grid/voting layout never reshuffles as
+// each one ships.
 export const GAMES: GameMeta[] = [
-  { key: "CYBER_DUEL", name: "Cyber Duel", description: "Reaction + accuracy battle", icon: Target, accent: "cyan" },
-  { key: "NEON_CHESS", name: "Neon Chess", description: "Tactical 5×5 board duel", icon: Swords, accent: "violet" },
-  { key: "CODE_BREAKER", name: "Code Breaker", description: "Crack the hidden code", icon: Lock, accent: "magenta" },
-  { key: "ARENA_CARDS", name: "Arena Cards", description: "Energy-based card battle", icon: Layers, accent: "ember" },
-  { key: "MEMORY_WARFARE", name: "Memory Warfare", description: "Race to match every pair", icon: Brain, accent: "cyan" },
-  { key: "SPEED_TYPING", name: "Speed Typing", description: "Same sentence, fastest wins", icon: Keyboard, accent: "violet" },
-  { key: "TOWER_CONTROL", name: "Tower Control", description: "Capture zones in real time", icon: Flag, accent: "magenta" },
-  { key: "PUZZLE_ARENA", name: "Puzzle Arena", description: "Solve puzzles, beat the clock", icon: Puzzle, accent: "ember" },
+  { key: "CONNECT_FOUR", name: "Connect Four", description: "Drop discs, connect four to win", icon: Target, accent: "ember" },
+  { key: "DOTS_AND_BOXES", name: "Dots and Boxes", description: "Claim boxes, most boxes wins", icon: Grid3x3, accent: "cyan" },
+  { key: "QUICK_MATH", name: "Quick Math", description: "Fastest correct answer wins", icon: Calculator, accent: "violet", comingSoon: true },
+  { key: "TYPING_RACE", name: "Typing Race", description: "Same sentence, fastest wins", icon: Keyboard, accent: "magenta", comingSoon: true },
+  { key: "GUESS_THE_WORD", name: "Guess the Word", description: "Guess the word from clues", icon: HelpCircle, accent: "ember", comingSoon: true },
+  { key: "MEMORY_RACE", name: "Memory Race", description: "Memorize, then reproduce it first", icon: Brain, accent: "cyan", comingSoon: true },
+  { key: "FIND_THE_DIFFERENT", name: "Find the Different One", description: "Spot the odd one out first", icon: ScanSearch, accent: "violet", comingSoon: true },
+  { key: "WORD_CHAIN", name: "Word Chain", description: "Chain words by the last letter", icon: Link2, accent: "magenta", comingSoon: true },
 ];
 
 export function getGameMeta(key: string): GameMeta | undefined {
