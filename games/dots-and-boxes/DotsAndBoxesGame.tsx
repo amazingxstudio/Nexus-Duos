@@ -16,10 +16,10 @@ const DURATION_MS = 6 * 60_000;
 // list previously meant every such class here was silently dropped,
 // collapsing the whole board to nothing visible. Inline styles always
 // work regardless of that.
-const DOT = 10;
-const CELL = 40;
+const DOT = 8;
+const CELL = 27;
 
-export function DotsAndBoxesGame({ matchId, roomCode, opponentId }: { matchId: string; roomCode: string; opponentId: string }) {
+export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
   const { payload, scores, remainingMs, sendAction, status, opponentDisconnected, result } = useGameMatch({ matchId, roomCode });
 
@@ -111,7 +111,7 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId }: { matchId: s
                         ...cellStyle,
                         alignSelf: "center",
                         width: "100%",
-                        height: 16,
+                        height: 14,
                         background: "transparent",
                         border: "none",
                         padding: 0,
@@ -143,7 +143,7 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId }: { matchId: s
                       style={{
                         ...cellStyle,
                         justifySelf: "center",
-                        width: 16,
+                        width: 14,
                         height: "100%",
                         background: "transparent",
                         border: "none",
@@ -187,7 +187,7 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId }: { matchId: s
         </div>
       </GameShell>
       {status === "finished" && result && userId && (
-        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} />
+        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} />
       )}
     </>
   );
