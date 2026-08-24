@@ -22,7 +22,7 @@ const COLS = 7;
 const CELL = 40;
 const GAP = 4;
 
-export function ConnectFourGame({ matchId, roomCode, opponentId }: { matchId: string; roomCode: string; opponentId: string }) {
+export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
   const { payload, scores, remainingMs, sendAction, status, opponentDisconnected, result } = useGameMatch({ matchId, roomCode });
 
@@ -138,7 +138,7 @@ export function ConnectFourGame({ matchId, roomCode, opponentId }: { matchId: st
         </div>
       </GameShell>
       {status === "finished" && result && userId && (
-        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} />
+        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} />
       )}
     </>
   );
