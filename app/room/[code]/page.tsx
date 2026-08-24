@@ -125,7 +125,12 @@ export default function RoomPage({ params }: { params: { code: string } }) {
         )}
 
         {room.status === "IN_PROGRESS" && room.match_id && room.game && opponent && (
-          <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div
+            key="game"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="h-[calc(100dvh-13rem)] min-h-0"
+          >
             <GameDispatcher gameKey={room.game.key} matchId={room.match_id} roomCode={room.code} opponentId={opponent.id} />
           </motion.div>
         )}
