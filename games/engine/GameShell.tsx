@@ -17,7 +17,7 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
   const urgent = pct < 20;
 
   return (
-    <div className="flex min-h-dvh flex-col px-4 pb-8 pt-6">
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 pb-8 pt-6">
       <div className="glass-panel mb-4 h-2 w-full overflow-hidden rounded-full">
         <motion.div
           className={`h-full rounded-full ${urgent ? "bg-magenta" : "bg-gradient-to-r from-cyan to-violet"}`}
@@ -46,7 +46,7 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
         )}
       </AnimatePresence>
 
-      <div className="flex flex-1 items-center justify-center">{children}</div>
+      <div className="flex min-h-0 flex-1 items-center justify-center">{children}</div>
     </div>
   );
 }
