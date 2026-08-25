@@ -64,9 +64,9 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
         <Stat icon={Trophy} label="Score" value={profile.total_score} />
       </div>
       <div className="mt-4 grid w-full max-w-sm grid-cols-3 gap-3 text-center text-sm">
-        <p className="text-cyan">{profile.wins} W</p>
-        <p className="text-magenta">{profile.losses} L</p>
-        <p className="text-ink-muted">{profile.draws} D</p>
+        <p className="text-cyan">{profile.wins} Wins</p>
+        <p className="text-magenta">{profile.losses} Losses</p>
+        <p className="text-ink-muted">{profile.draws} Draws</p>
       </div>
 
       <div className="mt-10 w-full max-w-sm">
