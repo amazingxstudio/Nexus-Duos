@@ -20,12 +20,12 @@ export interface GameMeta {
 export const GAMES: GameMeta[] = [
   { key: "CONNECT_FOUR", name: "Connect Four", description: "Drop discs, connect four to win", icon: Target, accent: "ember" },
   { key: "DOTS_AND_BOXES", name: "Dots and Boxes", description: "Claim boxes, most boxes wins", icon: Grid3x3, accent: "cyan" },
-  { key: "QUICK_MATH", name: "Quick Math", description: "Fastest correct answer wins", icon: Calculator, accent: "violet", comingSoon: true },
-  { key: "TYPING_RACE", name: "Typing Race", description: "Same sentence, fastest wins", icon: Keyboard, accent: "magenta", comingSoon: true },
-  { key: "GUESS_THE_WORD", name: "Guess the Word", description: "Guess the word from clues", icon: HelpCircle, accent: "ember", comingSoon: true },
-  { key: "MEMORY_RACE", name: "Memory Race", description: "Memorize, then reproduce it first", icon: Brain, accent: "cyan", comingSoon: true },
-  { key: "FIND_THE_DIFFERENT", name: "Find the Different One", description: "Spot the odd one out first", icon: ScanSearch, accent: "violet", comingSoon: true },
-  { key: "WORD_CHAIN", name: "Word Chain", description: "Chain words by the last letter", icon: Link2, accent: "magenta", comingSoon: true },
+  { key: "QUICK_MATH", name: "Quick Math", description: "Fastest correct answer wins", icon: Calculator, accent: "violet" },
+  { key: "TYPING_RACE", name: "Typing Race", description: "Same sentence, fastest wins", icon: Keyboard, accent: "magenta" },
+  { key: "GUESS_THE_WORD", name: "Guess the Word", description: "Guess the word from clues", icon: HelpCircle, accent: "ember" },
+  { key: "MEMORY_RACE", name: "Memory Race", description: "Memorize, then reproduce it first", icon: Brain, accent: "cyan" },
+  { key: "FIND_THE_DIFFERENT", name: "Find the Different One", description: "Spot the odd one out first", icon: ScanSearch, accent: "violet" },
+  { key: "WORD_CHAIN", name: "Word Chain", description: "Chain words by the last letter", icon: Link2, accent: "magenta" },
 ];
 
 export function getGameMeta(key: string): GameMeta | undefined {
