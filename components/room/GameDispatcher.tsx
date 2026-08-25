@@ -16,9 +16,6 @@ interface GameDispatcherProps { gameKey: string; matchId: string; roomCode: stri
 // game's *Game.tsx file (same export name, same path) — this switch never
 // needs to change again.
 export function GameDispatcher({ gameKey, matchId, roomCode, opponentId }: GameDispatcherProps) {
-  // gameKey is forwarded too — ConnectFourGame/DotsAndBoxesGame need it to
-  // pass along to MatchResultOverlay for the "Duel Again" rematch invite.
-  // Harmless extra prop for the still-placeholder games below.
   const props = { matchId, roomCode, opponentId, gameKey };
   switch (gameKey) {
     case "CONNECT_FOUR": return <ConnectFourGame {...props} />;
@@ -30,6 +27,6 @@ export function GameDispatcher({ gameKey, matchId, roomCode, opponentId }: GameD
     case "FIND_THE_DIFFERENT": return <FindTheDifferentGame {...props} />;
     case "WORD_CHAIN": return <WordChainGame {...props} />;
     default:
-      return <div className="glass-panel p-6 text-center text-ink-muted">This game isn&apos;t available yet.</div>;
+      return <div className="flex h-full items-center justify-center"><div className="glass-panel p-6 text-center text-ink-muted">This game isn&apos;t available yet.</div></div>;
   }
 }
