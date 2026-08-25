@@ -97,9 +97,9 @@ export default function MyProfilePage() {
           <Stat icon={Trophy} label="Score" value={user?.profile?.total_score ?? 0} />
         </div>
         <div className="mt-3 grid grid-cols-3 gap-3 text-center text-sm">
-          <p className="text-cyan">{user?.profile?.wins ?? 0} W</p>
-          <p className="text-magenta">{user?.profile?.losses ?? 0} L</p>
-          <p className="text-ink-muted">{user?.profile?.draws ?? 0} D</p>
+          <p className="text-cyan">{user?.profile?.wins ?? 0} Wins</p>
+          <p className="text-magenta">{user?.profile?.losses ?? 0} Losses</p>
+          <p className="text-ink-muted">{user?.profile?.draws ?? 0} Draws</p>
         </div>
       </section>
 
