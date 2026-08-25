@@ -13,12 +13,13 @@ const DEFAULT_BOTTOM_OFFSET = 160; // clears the bottom nav + invite banner by d
 
 /**
  * A small, draggable, circular "return to your match" button. Shown
- * whenever both players are in a live room and the player has navigated
- * away from that room's page. Its position is remembered across visits
- * (localStorage) so the player only has to drag it out of the way once.
- * Tapping it (without dragging) returns to the room; the live room state
- * itself was never lost, since RoomSync (mounted at the app root) keeps
- * tracking it in the background regardless of which page is on screen.
+ * whenever the player has an active room — hosting and waiting for someone
+ * to join, joined, or mid-match — and has navigated away from that room's
+ * page. Its position is remembered across visits (localStorage) so the
+ * player only has to drag it out of the way once. Tapping it (without
+ * dragging) returns to the room; the live room state itself was never
+ * lost, since RoomSync (mounted at the app root) keeps tracking it in the
+ * background regardless of which page is on screen.
  */
 export function ActiveRoomFloatingButton() {
   const pathname = usePathname();
@@ -29,7 +30,7 @@ export function ActiveRoomFloatingButton() {
   const draggedRef = useRef(false);
 
   const roomPath = room ? `/room/${room.code}` : null;
-  const visible = Boolean(room && room.player2 && room.status !== "FINISHED" && pathname !== roomPath);
+  const visible = Boolean(room && room.status !== "FINISHED" && pathname !== roomPath);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
