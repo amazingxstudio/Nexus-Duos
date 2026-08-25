@@ -3,10 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Swords, X, Check } from "lucide-react";
+import { Swords, X, Check, RefreshCw } from "lucide-react";
 import { useSocket } from "./SocketProvider";
 
-interface Invite { from_user_id: string; from_nickname: string; from_player_id: string; }
+interface Invite {
+  from_user_id: string;
+  from_nickname: string;
+  from_player_id: string;
+  game_key?: string | null;
+  game_name?: string | null;
+  is_rematch?: boolean;
+}
 
 export function InviteListener() {
   const socket = useSocket();
@@ -35,9 +42,20 @@ export function InviteListener() {
 
   function respond(accept: boolean) {
     if (!invite) return;
-    socket?.emit(accept ? "invite:accept" : "invite:decline", { from_user_id: invite.from_user_id });
+    socket?.emit(accept ? "invite:accept" : "invite:decline", {
+      from_user_id: invite.from_user_id,
+      game_key: invite.game_key ?? null,
+    });
     if (!accept) setInvite(null);
   }
+
+  const headline = invite
+    ? invite.is_rematch
+      ? `${invite.from_nickname} wants a rematch!`
+      : invite.game_name
+        ? `${invite.from_nickname} wants to duel — ${invite.game_name}!`
+        : `${invite.from_nickname} wants to duel!`
+    : "";
 
   return (
     <AnimatePresence>
@@ -50,9 +68,11 @@ export function InviteListener() {
           className="fixed inset-x-4 bottom-24 z-[60] mx-auto max-w-sm"
         >
           <div className="glass-panel-cyan flex items-center gap-3 p-4">
-            <span className="icon-badge h-10 w-10 shrink-0 bg-cyan/10"><Swords size={18} className="text-cyan" /></span>
+            <span className="icon-badge h-10 w-10 shrink-0 bg-cyan/10">
+              {invite.is_rematch ? <RefreshCw size={18} className="text-cyan" /> : <Swords size={18} className="text-cyan" />}
+            </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-ink-primary">{invite.from_nickname} wants to duel!</p>
+              <p className="text-sm font-medium text-ink-primary">{headline}</p>
               <p className="stat-mono text-xs text-ink-muted">{invite.from_player_id}</p>
             </div>
             <button onClick={() => respond(false)} className="icon-badge h-9 w-9 bg-white/5 text-ink-muted"><X size={16} /></button>
