@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Search, UserPlus, Swords, Circle, Check } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Search, UserPlus, Swords, Circle, Check, Shuffle, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
+import { GAMES } from "@/lib/games";
 
 interface PlayerCard {
   user_id: string; nickname: string; player_id: string; photo_url?: string | null; online: boolean;
@@ -20,6 +21,7 @@ export default function FriendsPage() {
   const [friends, setFriends] = useState<PlayerCard[]>([]);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [sentInvite, setSentInvite] = useState<string | null>(null);
+  const [pickerFor, setPickerFor] = useState<PlayerCard | null>(null);
 
   function loadFriends() {
     apiFetch<{ friends: PlayerCard[] }>("/players/friends", { token }).then((res) => setFriends(res.friends));
@@ -50,9 +52,14 @@ export default function FriendsPage() {
     loadFriends();
   }
 
-  function invite(p: PlayerCard) {
-    socket?.emit("invite:send", { to_user_id: p.user_id });
-    setSentInvite(p.user_id);
+  // Tapping the duel button opens a picker (Voting, or a specific game)
+  // instead of firing the invite immediately — the chosen game_key rides
+  // along with the invite so the room skips straight to Ready Check.
+  function sendInvite(gameKey: string | null) {
+    if (!pickerFor) return;
+    socket?.emit("invite:send", { to_user_id: pickerFor.user_id, game_key: gameKey });
+    setSentInvite(pickerFor.user_id);
+    setPickerFor(null);
     setTimeout(() => setSentInvite(null), 3000);
   }
 
@@ -108,13 +115,59 @@ export default function FriendsPage() {
               </div>
             </Link>
             {f.online && (
-              <button onClick={() => invite(f)} disabled={sentInvite === f.user_id} className="icon-badge h-9 w-9 bg-cyan text-void disabled:opacity-50">
+              <button onClick={() => setPickerFor(f)} disabled={sentInvite === f.user_id} className="icon-badge h-9 w-9 bg-cyan text-void disabled:opacity-50">
                 {sentInvite === f.user_id ? <Check size={16} /> : <Swords size={16} />}
               </button>
             )}
           </motion.div>
         ))}
       </div>
+
+      <AnimatePresence>
+        {pickerFor && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[65] flex items-end justify-center bg-void/70 backdrop-blur-glass"
+            onClick={() => setPickerFor(null)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 32 }}
+              className="glass-panel max-h-[75vh] w-full max-w-sm overflow-y-auto rounded-t-3xl rounded-b-none p-4 pb-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-medium text-ink-primary">Duel {pickerFor.nickname} in…</p>
+                <button onClick={() => setPickerFor(null)} className="icon-badge h-8 w-8 bg-white/5 text-ink-muted"><X size={14} /></button>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <button onClick={() => sendInvite(null)} className="selectable glass-panel flex items-center gap-3 p-3 text-left">
+                  <span className="icon-badge h-10 w-10 bg-violet/10"><Shuffle size={18} className="text-violet" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-ink-primary">Voting</p>
+                    <p className="text-xs text-ink-muted">Both of you pick 3 favorites</p>
+                  </div>
+                </button>
+
+                {GAMES.map((g) => (
+                  <button key={g.key} onClick={() => sendInvite(g.key)} className="selectable glass-panel flex items-center gap-3 p-3 text-left">
+                    <span className="icon-badge h-10 w-10 bg-cyan/10"><g.icon size={18} className="text-cyan" /></span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-ink-primary">{g.name}</p>
+                      <p className="text-xs text-ink-muted">{g.description}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
