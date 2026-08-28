@@ -1,6 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { BellRing } from "lucide-react";
 import { useGameMatch } from "@/games/engine/useGameMatch";
 import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
@@ -8,6 +10,9 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
 
 const DURATION_MS = 6 * 60_000;
+const NUDGE_AFTER_MS = 5000;
+const NUDGE_COOLDOWN_MS = 3000;
+const HIGHLIGHT_MS = 2000;
 
 // Critical layout/sizing is done with inline styles rather than Tailwind
 // utility classes. Those classes only exist in the compiled CSS if
@@ -19,9 +24,35 @@ const DURATION_MS = 6 * 60_000;
 const DOT = 8;
 const CELL = 27;
 
+interface LastMove { type: "h" | "v"; row: number; col: number; by: string }
+
 export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
-  const { payload, scores, remainingMs, sendAction, status, opponentDisconnected, result } = useGameMatch({ matchId, roomCode });
+  const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, leaveMatch, nudgeOpponent } = useGameMatch({ matchId, roomCode });
+  const [now, setNow] = useState(Date.now());
+  const [turnStartedLocal, setTurnStartedLocal] = useState(Date.now());
+  const [nudgeCooldownUntil, setNudgeCooldownUntil] = useState(0);
+  const [highlighted, setHighlighted] = useState<{ type: "h" | "v"; row: number; col: number } | null>(null);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, []);
+
+  const turnUserId = (payload?.turn_user_id as string | null) ?? null;
+  useEffect(() => { setTurnStartedLocal(Date.now()); }, [turnUserId]);
+
+  // Highlight the rival's most recent line for a couple seconds so it
+  // doesn't just silently appear on the board.
+  const lastMove = (payload?.last_move ?? null) as LastMove | null;
+  const lastMoveKey = lastMove ? `${lastMove.type}-${lastMove.row}-${lastMove.col}-${lastMove.by}` : "";
+  useEffect(() => {
+    if (!lastMove || lastMove.by === userId) return;
+    setHighlighted({ type: lastMove.type, row: lastMove.row, col: lastMove.col });
+    const t = setTimeout(() => setHighlighted(null), HIGHLIGHT_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastMoveKey]);
 
   if (!payload) return <LoadingProgress label="Waiting for match to start…" />;
 
@@ -29,7 +60,6 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { m
   const hLines = payload.h_lines as (string | null)[][];
   const vLines = payload.v_lines as (string | null)[][];
   const boxes = payload.boxes as (string | null)[][];
-  const turnUserId = payload.turn_user_id as string | null;
   const myTurn = turnUserId === userId;
 
   function drawLine(type: "h" | "v", row: number, col: number) {
@@ -37,6 +67,14 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { m
     const lines = type === "h" ? hLines : vLines;
     if (lines[row][col] !== null) return;
     sendAction("draw_line", { type, row, col });
+  }
+
+  const showNudge = !myTurn && status === "active" && now - turnStartedLocal > NUDGE_AFTER_MS;
+  const nudgeOnCooldown = now < nudgeCooldownUntil;
+  function nudge() {
+    if (nudgeOnCooldown) return;
+    nudgeOpponent();
+    setNudgeCooldownUntil(Date.now() + NUDGE_COOLDOWN_MS);
   }
 
   const gridDim = dots * 2 - 1;
@@ -47,7 +85,7 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { m
 
   return (
     <>
-      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected}>
+      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           <p
             style={{
@@ -60,6 +98,34 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { m
           >
             {myTurn ? "Your move" : "Rival's move"}
           </p>
+
+          <AnimatePresence>
+            {showNudge && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onClick={nudge}
+                disabled={nudgeOnCooldown}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  border: "1px solid rgb(var(--color-ember) / 0.35)",
+                  background: "rgb(var(--color-ember) / 0.1)",
+                  color: "rgb(var(--color-ember))",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  opacity: nudgeOnCooldown ? 0.5 : 1,
+                }}
+              >
+                <BellRing size={13} />
+                {nudgeOnCooldown ? "Nudged" : "Nudge rival"}
+              </motion.button>
+            )}
+          </AnimatePresence>
 
           <div
             style={{
@@ -102,6 +168,7 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { m
                   const row = gr / 2, col = (gc - 1) / 2;
                   const owner = hLines[row][col];
                   const clickable = myTurn && owner === null;
+                  const isHighlighted = highlighted?.type === "h" && highlighted.row === row && highlighted.col === col;
                   return (
                     <button
                       key={key}
@@ -118,7 +185,11 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { m
                         cursor: clickable ? "pointer" : "default",
                       }}
                     >
-                      <span
+                      <motion.span
+                        animate={{
+                          scaleY: isHighlighted ? 1.8 : 1,
+                          boxShadow: isHighlighted ? `0 0 10px 2px rgb(var(--color-${owner === userId ? "cyan" : "magenta"}) / 0.8)` : "none",
+                        }}
                         style={{
                           display: "block",
                           width: "100%",
@@ -135,6 +206,7 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { m
                   const row = (gr - 1) / 2, col = gc / 2;
                   const owner = vLines[row][col];
                   const clickable = myTurn && owner === null;
+                  const isHighlighted = highlighted?.type === "v" && highlighted.row === row && highlighted.col === col;
                   return (
                     <button
                       key={key}
@@ -151,7 +223,11 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { m
                         cursor: clickable ? "pointer" : "default",
                       }}
                     >
-                      <span
+                      <motion.span
+                        animate={{
+                          scaleX: isHighlighted ? 1.8 : 1,
+                          boxShadow: isHighlighted ? `0 0 10px 2px rgb(var(--color-${owner === userId ? "cyan" : "magenta"}) / 0.8)` : "none",
+                        }}
                         style={{
                           display: "block",
                           width: 4,
