@@ -95,26 +95,82 @@ img.draggable-ok { pointer-events: auto; }
 }
 
 @layer components {
-  /* ---- Glass surfaces ---- */
+  /* ---- Glass surfaces (Liquid Glass) ----
+     Two things make blur actually read as "glass" instead of a flat
+     translucent rectangle: something vivid and moving behind it (see the
+     much-brighter, more numerous orbs in AmbientBackground.tsx now), and
+     a light cue on the glass itself — a specular highlight along the top
+     edge (::before) plus a hairline inner rim of light (::after). Every
+     surface below gets both, plus its own explicit backdrop-filter: the
+     old setup had .glass-card and .btn-ghost pulling `@apply glass-panel`,
+     but Tailwind's @apply only carries over utility-class declarations —
+     the raw `backdrop-filter` line in .glass-panel was plain CSS, not a
+     utility, so it silently never reached either of them and both were
+     rendering with zero blur this whole time. */
   .glass-panel {
-    @apply relative bg-white/[0.04] border border-white/[0.08] shadow-glass rounded-card;
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    @apply relative overflow-hidden bg-white/[0.07] border border-white/[0.16] shadow-glass rounded-card;
+    backdrop-filter: blur(28px) saturate(220%);
+    -webkit-backdrop-filter: blur(28px) saturate(220%);
   }
   .theme-light .glass-panel {
-    @apply bg-black/[0.03] border-black/[0.06];
+    @apply bg-white/50 border-white/70;
   }
   .glass-panel-cyan { @apply glass-panel border-cyan/30 shadow-glow-cyan; }
   .glass-panel-magenta { @apply glass-panel border-magenta/30 shadow-glow-magenta; }
   .glass-panel-violet { @apply glass-panel border-violet/30 shadow-glow-violet; }
 
+  .glass-panel::before,
+  .glass-panel-cyan::before,
+  .glass-panel-magenta::before,
+  .glass-panel-violet::before,
+  .glass-card::before,
+  .btn-ghost::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.06) 26%, rgba(255,255,255,0) 55%);
+  }
+  .theme-light .glass-panel::before,
+  .theme-light .glass-panel-cyan::before,
+  .theme-light .glass-panel-magenta::before,
+  .theme-light .glass-panel-violet::before,
+  .theme-light .glass-card::before,
+  .theme-light .btn-ghost::before {
+    background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.25) 26%, rgba(255,255,255,0) 55%);
+  }
+  .glass-panel::after,
+  .glass-panel-cyan::after,
+  .glass-panel-magenta::after,
+  .glass-panel-violet::after,
+  .glass-card::after,
+  .btn-ghost::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.32), inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+  /* Real content needs to sit above the specular/rim overlays, not under them. */
+  .glass-panel > *, .glass-panel-cyan > *, .glass-panel-magenta > *, .glass-panel-violet > *,
+  .glass-card > *, .btn-ghost > * {
+    position: relative;
+    z-index: 1;
+  }
+
   /* Interactive card: lifts and brightens on press/hover */
   .glass-card {
-    @apply glass-panel transition-all duration-200 ease-out;
+    @apply relative overflow-hidden bg-white/[0.07] border border-white/[0.16] shadow-glass rounded-card transition-all duration-200 ease-out;
+    backdrop-filter: blur(28px) saturate(220%);
+    -webkit-backdrop-filter: blur(28px) saturate(220%);
   }
-  .glass-card:active { @apply scale-[0.97] bg-white/[0.07]; }
+  .glass-card:active { @apply scale-[0.97] bg-white/[0.1]; }
   @media (hover: hover) {
-    .glass-card:hover { @apply bg-white/[0.06] border-white/[0.14] -translate-y-0.5; }
+    .glass-card:hover { @apply bg-white/[0.1] border-white/[0.22] -translate-y-0.5; }
   }
 
   /* The signature "duel seam" divider between two competing profiles */
@@ -142,13 +198,15 @@ img.draggable-ok { pointer-events: auto; }
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3
-      font-display font-semibold text-ink-primary glass-panel
+    @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full px-6 py-3
+      font-display font-semibold text-ink-primary bg-white/[0.07] border border-white/[0.16] shadow-glass
       active:scale-[0.96] transition-all duration-150
       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan;
+    backdrop-filter: blur(28px) saturate(220%);
+    -webkit-backdrop-filter: blur(28px) saturate(220%);
   }
   @media (hover: hover) {
-    .btn-ghost:hover { @apply bg-white/[0.08] border-white/20; }
+    .btn-ghost:hover { @apply bg-white/[0.1] border-white/[0.26]; }
   }
 
   .btn-primary:disabled, .btn-ghost:disabled {
