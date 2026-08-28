@@ -72,4 +72,4 @@ export function playDrawSound() {
 export function playTickSound() {
   if (!soundEnabled()) return;
   tone(880, 0, 0.12, "sine", 0.08);
-                                                  }
+}
