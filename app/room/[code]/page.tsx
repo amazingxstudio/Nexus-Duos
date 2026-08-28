@@ -21,6 +21,9 @@ export default function RoomPage({ params }: { params: { code: string } }) {
   const socket = useSocket();
   const setInGame = useRoomPhaseStore((s) => s.setInGame);
 
+  // Room/ready state now lives in the global store (written to by RoomSync,
+  // which is mounted at the app root) instead of local component state —
+  // so switching pages and coming back doesn't lose anything in-flight.
   const room = useActiveRoomStore((s) => s.room);
   const ready = useActiveRoomStore((s) => s.ready);
   const opponentReady = useActiveRoomStore((s) => s.opponentReady);
@@ -37,6 +40,8 @@ export default function RoomPage({ params }: { params: { code: string } }) {
       .catch(() => setLoadError(true));
   }
 
+  // Navigated to a *different* room than the one currently tracked
+  // globally — start fresh instead of flashing stale data from the last one.
   useEffect(() => {
     if (room && room.code !== code) resetRoom();
   }, [code, room, resetRoom]);
@@ -45,7 +50,7 @@ export default function RoomPage({ params }: { params: { code: string } }) {
 
   useEffect(() => {
     if (!socket) return;
-    if (joinedChannel === code) return;
+    if (joinedChannel === code) return; // already subscribed — don't rejoin on every remount
     socket.emit("room:join_channel", { room_code: code });
     setJoinedChannel(code);
   }, [socket, code, joinedChannel, setJoinedChannel]);
@@ -124,7 +129,7 @@ export default function RoomPage({ params }: { params: { code: string } }) {
             key="game"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex h-[calc(100dvh-13rem)] min-h-0 flex-col justify-center"
+            className="h-[calc(100dvh-13rem)] min-h-0"
           >
             <GameDispatcher gameKey={room.game.key} matchId={room.match_id} roomCode={room.code} opponentId={opponent.id} />
           </motion.div>
