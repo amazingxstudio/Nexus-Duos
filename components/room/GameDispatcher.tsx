@@ -27,6 +27,6 @@ export function GameDispatcher({ gameKey, matchId, roomCode, opponentId }: GameD
     case "FIND_THE_DIFFERENT": return <FindTheDifferentGame {...props} />;
     case "WORD_CHAIN": return <WordChainGame {...props} />;
     default:
-      return <div className="flex h-full items-center justify-center"><div className="glass-panel p-6 text-center text-ink-muted">This game isn&apos;t available yet.</div></div>;
+      return <div className="glass-panel p-6 text-center text-ink-muted">This game isn&apos;t available yet.</div>;
   }
 }
