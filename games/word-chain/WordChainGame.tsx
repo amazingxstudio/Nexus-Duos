@@ -36,7 +36,7 @@ interface TurnDelta { user_id: string; points: number; reason: string }
 export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
   const socket = useSocket();
-  const { payload, scores, remainingMs, sendAction, status, opponentDisconnected, result } = useGameMatch({ matchId, roomCode });
+  const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, leaveMatch } = useGameMatch({ matchId, roomCode });
   const [typed, setTyped] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -118,7 +118,7 @@ export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matc
 
   return (
     <>
-      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected}>
+      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, width: "100%", maxWidth: 380 }}>
           <p
             style={{
@@ -265,4 +265,4 @@ export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matc
       )}
     </>
   );
-                  }
+}
