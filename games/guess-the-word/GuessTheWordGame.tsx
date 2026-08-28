@@ -12,7 +12,7 @@ const DURATION_MS = 90 * 1000;
 
 export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
-  const { payload, scores, remainingMs, sendAction, status, opponentDisconnected, result } = useGameMatch({ matchId, roomCode });
+  const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, leaveMatch } = useGameMatch({ matchId, roomCode });
   const [guess, setGuess] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -23,6 +23,8 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
 
   const clue = payload.clue as string;
   const wordLength = payload.word_length as number;
+  const firstLetter = payload.first_letter as string;
+  const lastLetter = payload.last_letter as string;
 
   function submit() {
     if (status !== "active" || guess.trim() === "") return;
@@ -34,7 +36,7 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
 
   return (
     <>
-      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected}>
+      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18, width: "100%", maxWidth: 340 }}>
           <motion.p
             key={clue}
@@ -45,20 +47,34 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
             “{clue}”
           </motion.p>
 
-          <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
-            {Array.from({ length: wordLength }).map((_, i) => (
-              <span
-                key={i}
-                style={{
-                  width: 22,
-                  height: 3,
-                  borderRadius: 999,
-                  background: "rgb(var(--color-ink-primary) / 0.25)",
-                }}
-              />
-            ))}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+            {Array.from({ length: wordLength }).map((_, i) => {
+              const isFirst = i === 0;
+              const isLast = i === wordLength - 1;
+              const hint = isFirst ? firstLetter : isLast ? lastLetter : null;
+              return (
+                <div
+                  key={i}
+                  className="stat-mono"
+                  style={{
+                    width: 22,
+                    height: 28,
+                    display: "flex",
+                    alignItems: "flex-end",
+                    justifyContent: "center",
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: hint ? "rgb(var(--color-cyan))" : "rgb(var(--color-ink-primary) / 0.25)",
+                    borderBottom: "2px solid rgb(var(--color-ink-primary) / 0.25)",
+                    paddingBottom: 2,
+                  }}
+                >
+                  {hint ?? ""}
+                </div>
+              );
+            })}
           </div>
-          <p style={{ fontSize: 11, color: "rgb(var(--color-ink-faint))" }}>{wordLength}-letter word</p>
+          <p style={{ fontSize: 11, color: "rgb(var(--color-ink-faint))" }}>{wordLength}-letter word — first &amp; last letter shown</p>
 
           <div style={{ display: "flex", gap: 8, width: "100%" }}>
             <input
