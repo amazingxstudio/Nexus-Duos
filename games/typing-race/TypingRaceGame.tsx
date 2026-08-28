@@ -11,14 +11,21 @@ const DURATION_MS = 90 * 1000;
 
 export function TypingRaceGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
-  const { payload, scores, remainingMs, sendAction, status, opponentDisconnected, result } = useGameMatch({ matchId, roomCode });
+  const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, leaveMatch } = useGameMatch({ matchId, roomCode });
   const [typed, setTyped] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  // Tracks the last value WE accepted, so every change can be checked
+  // against it — this is what makes the anti-cheat check below possible.
+  const prevValueRef = useRef("");
 
   const sentence = payload?.sentence as string | undefined;
 
   // A new sentence (ours or the rival's) arrived — clear the box.
-  useEffect(() => { setTyped(""); inputRef.current?.focus(); }, [sentence]);
+  useEffect(() => {
+    setTyped("");
+    prevValueRef.current = "";
+    inputRef.current?.focus();
+  }, [sentence]);
 
   // Auto-submit the instant the typed text is a full, exact match.
   useEffect(() => {
@@ -34,9 +41,26 @@ export function TypingRaceGame({ matchId, roomCode, opponentId, gameKey }: { mat
   const myScore = userId ? (scores[userId] ?? 0) : 0;
   const opponentScore = scores[opponentId] ?? 0;
 
+  // Only a genuine single-keystroke append at the end, or a deletion from
+  // the end (backspace / select-and-delete), is accepted. Anything else —
+  // the phone keyboard's word-prediction bar completing a whole word,
+  // autocorrect silently swapping a word mid-sentence, or a paste — changes
+  // more than "one character at the cursor" in a single event and gets
+  // rejected outright, so the on-screen keyboard's own suggestions can
+  // never hand the player a free shortcut through the sentence.
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const newValue = e.target.value;
+    const prevValue = prevValueRef.current;
+    const isSingleCharAppend = newValue.length === prevValue.length + 1 && newValue.startsWith(prevValue);
+    const isDeletion = newValue.length <= prevValue.length && prevValue.startsWith(newValue);
+    if (!isSingleCharAppend && !isDeletion) return; // silently reject — input stays at its previous value
+    prevValueRef.current = newValue;
+    setTyped(newValue);
+  }
+
   return (
     <>
-      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected}>
+      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18, width: "100%", maxWidth: 380 }}>
           <p
             style={{
@@ -64,7 +88,12 @@ export function TypingRaceGame({ matchId, roomCode, opponentId, gameKey }: { mat
           <input
             ref={inputRef}
             value={typed}
-            onChange={(e) => setTyped(e.target.value)}
+            onChange={handleChange}
+            onPaste={(e) => e.preventDefault()}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             disabled={status !== "active"}
             placeholder="Start typing…"
             style={{
