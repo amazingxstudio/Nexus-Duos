@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { BellRing } from "lucide-react";
 import { useGameMatch } from "@/games/engine/useGameMatch";
 import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
@@ -10,6 +12,8 @@ import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
 const DURATION_MS = 5 * 60_000;
 const ROWS = 6;
 const COLS = 7;
+const NUDGE_AFTER_MS = 5000;
+const NUDGE_COOLDOWN_MS = 3000;
 
 // Critical layout/sizing is done with inline styles rather than Tailwind
 // utility classes (grid-cols-7, aspect-square, etc). Those classes only
@@ -24,12 +28,22 @@ const GAP = 4;
 
 export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
-  const { payload, scores, remainingMs, sendAction, status, opponentDisconnected, result } = useGameMatch({ matchId, roomCode });
+  const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, leaveMatch, nudgeOpponent } = useGameMatch({ matchId, roomCode });
+  const [now, setNow] = useState(Date.now());
+  const [turnStartedLocal, setTurnStartedLocal] = useState(Date.now());
+  const [nudgeCooldownUntil, setNudgeCooldownUntil] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, []);
+
+  const turnUserId = (payload?.turn_user_id as string | null) ?? null;
+  useEffect(() => { setTurnStartedLocal(Date.now()); }, [turnUserId]);
 
   if (!payload) return <LoadingProgress label="Waiting for match to start…" />;
 
   const board = payload.board as (string | null)[][];
-  const turnUserId = payload.turn_user_id as string | null;
   const winningCells = (payload.winning_cells as [number, number][] | null) ?? null;
   const isDraw = payload.is_draw as boolean;
   const gameOver = Boolean(winningCells) || isDraw;
@@ -44,13 +58,21 @@ export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { ma
     sendAction("drop_disc", { column });
   }
 
+  const showNudge = !myTurn && !gameOver && status === "active" && now - turnStartedLocal > NUDGE_AFTER_MS;
+  const nudgeOnCooldown = now < nudgeCooldownUntil;
+  function nudge() {
+    if (nudgeOnCooldown) return;
+    nudgeOpponent();
+    setNudgeCooldownUntil(Date.now() + NUDGE_COOLDOWN_MS);
+  }
+
   const myScore = userId ? (scores[userId] ?? 0) : 0;
   const opponentScore = scores[opponentId] ?? 0;
   const boardWidth = COLS * CELL + (COLS - 1) * GAP;
 
   return (
     <>
-      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected}>
+      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           <p
             style={{
@@ -63,6 +85,34 @@ export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { ma
           >
             {gameOver ? "Game over" : myTurn ? "Your move" : "Rival's move"}
           </p>
+
+          <AnimatePresence>
+            {showNudge && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onClick={nudge}
+                disabled={nudgeOnCooldown}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  border: "1px solid rgb(var(--color-ember) / 0.35)",
+                  background: "rgb(var(--color-ember) / 0.1)",
+                  color: "rgb(var(--color-ember))",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  opacity: nudgeOnCooldown ? 0.5 : 1,
+                }}
+              >
+                <BellRing size={13} />
+                {nudgeOnCooldown ? "Nudged" : "Nudge rival"}
+              </motion.button>
+            )}
+          </AnimatePresence>
 
           <div
             style={{
