@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { User, Trophy, Percent, Target, Lock, Bot } from "lucide-react";
+import { User, Trophy, Percent, Target, Lock, Bot, UserPlus, Check, Copy } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getGameMeta } from "@/lib/games";
@@ -27,6 +27,8 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [matches, setMatches] = useState<MatchEntry[] | null>(null);
+  const [added, setAdded] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     apiFetch<PublicProfile>(`/profile/${playerId}`, { token })
@@ -40,6 +42,19 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
       .then((res) => setMatches(res.matches))
       .catch(() => setMatches([]));
   }, [profile?.history_visible, playerId, token]);
+
+  async function addFriend() {
+    if (!profile || added) return;
+    await apiFetch("/players/friends", { method: "POST", token, body: JSON.stringify({ player_id: profile.player_id }) });
+    setAdded(true);
+  }
+
+  function copyId() {
+    if (!profile) return;
+    navigator.clipboard.writeText(profile.player_id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
 
   if (loadError) {
     return <main className="flex min-h-dvh items-center justify-center px-6 text-center"><p className="text-ink-muted">Couldn&apos;t load this profile.</p></main>;
@@ -57,7 +72,22 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
         </div>
       </motion.div>
       <h1 className="mt-4 font-display text-xl font-bold text-ink-primary">{profile.nickname}</h1>
-      <p className="stat-mono text-xs text-ink-muted">{profile.player_id}</p>
+
+      <div className="mt-1 flex items-center gap-2">
+        <button onClick={copyId} className="stat-mono flex items-center gap-1.5 text-xs text-ink-muted">
+          {profile.player_id}
+          {copied ? <Check size={12} className="text-cyan" /> : <Copy size={12} />}
+        </button>
+        <button
+          onClick={addFriend}
+          disabled={added}
+          className={`icon-badge h-7 gap-1.5 px-3 text-xs font-medium ${added ? "bg-cyan/10 text-cyan" : "bg-white/5 text-ink-muted"}`}
+        >
+          {added ? <Check size={12} /> : <UserPlus size={12} />}
+          {added ? "Added" : "Add Friend"}
+        </button>
+      </div>
+
       <div className="mt-8 grid w-full max-w-sm grid-cols-3 gap-3">
         <Stat icon={Target} label="Matches" value={profile.total_matches} />
         <Stat icon={Percent} label="Win Rate" value={`${profile.win_rate}%`} />
