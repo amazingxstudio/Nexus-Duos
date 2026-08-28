@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { WifiOff } from "lucide-react";
+import { WifiOff, LogOut, X, Ban } from "lucide-react";
 
 interface GameShellProps {
   remainingMs: number | null;
@@ -9,21 +11,60 @@ interface GameShellProps {
   myScore: number;
   opponentScore: number;
   opponentDisconnected?: boolean;
+  /** True once the match has been voided (a player left while the other
+   * side was already disconnected) — replaces the whole shell with a
+   * neutral "match cancelled" screen instead of the normal game view. */
+  cancelled?: boolean;
+  /** Exit button, after the confirm dialog. Server decides forfeit vs.
+   * void based on whether the rival is still connected. */
+  onLeave: () => void;
   children: React.ReactNode;
 }
 
-export function GameShell({ remainingMs, totalMs, myScore, opponentScore, opponentDisconnected, children }: GameShellProps) {
+export function GameShell({ remainingMs, totalMs, myScore, opponentScore, opponentDisconnected, cancelled, onLeave, children }: GameShellProps) {
+  const router = useRouter();
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
   const pct = remainingMs !== null ? Math.max(0, Math.min(100, (remainingMs / totalMs) * 100)) : 100;
   const urgent = pct < 20;
 
+  function confirmLeave() {
+    onLeave();
+    setConfirmingLeave(false);
+    router.push("/");
+  }
+
+  if (cancelled) {
+    return (
+      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 px-6 text-center">
+        <span className="icon-badge h-16 w-16 border border-white/10">
+          <Ban size={26} className="text-ink-muted" />
+        </span>
+        <div>
+          <p className="font-display text-lg font-semibold text-ink-primary">Match cancelled</p>
+          <p className="mt-1 text-sm text-ink-muted">Your rival's connection dropped before the match finished — nothing was recorded either way.</p>
+        </div>
+        <button onClick={() => router.push("/")} className="btn-primary">Home</button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 pb-8 pt-6">
-      <div className="glass-panel mb-4 h-2 w-full overflow-hidden rounded-full">
-        <motion.div
-          className={`h-full rounded-full ${urgent ? "bg-magenta" : "bg-gradient-to-r from-cyan to-violet"}`}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.9, ease: "linear" }}
-        />
+      <div className="mb-4 flex items-center gap-3">
+        <div className="glass-panel h-2 flex-1 overflow-hidden rounded-full">
+          <motion.div
+            className={`h-full rounded-full ${urgent ? "bg-magenta" : "bg-gradient-to-r from-cyan to-violet"}`}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.9, ease: "linear" }}
+          />
+        </div>
+        <button
+          onClick={() => setConfirmingLeave(true)}
+          aria-label="Exit match"
+          className="icon-badge h-8 w-8 shrink-0 bg-white/5 text-ink-muted"
+        >
+          <LogOut size={14} />
+        </button>
       </div>
 
       <div className="mb-4 flex items-center justify-between">
@@ -47,6 +88,42 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
       </AnimatePresence>
 
       <div className="flex min-h-0 flex-1 items-center justify-center">{children}</div>
+
+      <AnimatePresence>
+        {confirmingLeave && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-void/80 backdrop-blur-glass px-6"
+            onClick={() => setConfirmingLeave(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              className="glass-panel flex w-full max-w-xs flex-col items-center gap-4 p-6 text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="icon-badge h-12 w-12 border border-magenta/30 bg-magenta/10">
+                <LogOut size={20} className="text-magenta" />
+              </span>
+              <div>
+                <p className="font-display text-base font-semibold text-ink-primary">Leave this match?</p>
+                <p className="mt-1 text-xs text-ink-muted">
+                  {opponentDisconnected
+                    ? "Your rival is already gone, so nothing will be recorded."
+                    : "Your rival is still here — leaving now counts as a forfeit (a loss for you, a win for them)."}
+                </p>
+              </div>
+              <div className="flex w-full gap-2">
+                <button onClick={() => setConfirmingLeave(false)} className="btn-ghost flex-1"><X size={14} />Stay</button>
+                <button onClick={confirmLeave} className="btn-primary flex-1 !bg-magenta">Leave</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -23,6 +23,11 @@ export function useGameMatch({ matchId, roomCode }: UseGameMatchOptions) {
   const [status, setStatus] = useState<"waiting" | "active" | "finished">("waiting");
   const [result, setResult] = useState<MatchFinishResult | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
+  // Set when the match was voided (a player exited while the other side
+  // was already disconnected) rather than actually finished — distinct
+  // from `status === "finished"` so MatchResultOverlay (win/lose sound,
+  // rematch prompt) never renders for something nobody really won.
+  const [cancelled, setCancelled] = useState(false);
   const joinedRef = useRef(false);
 
   // The "game_started" broadcast fires exactly once, right as the match
@@ -69,8 +74,18 @@ export function useGameMatch({ matchId, roomCode }: UseGameMatchOptions) {
       setStatus("finished");
       setResult(data.result);
     }
+    function onCancelled(data: { match_id: string }) {
+      if (data.match_id !== matchId) return;
+      setCancelled(true);
+    }
     function onOpponentDisconnected(data: { match_id: string }) {
       if (data.match_id === matchId) setOpponentDisconnected(true);
+    }
+    function onTurnNudge(data: { match_id: string }) {
+      if (data.match_id !== matchId) return;
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate([200, 100, 200]);
+      }
     }
 
     socket.on("game_started", onStarted);
@@ -78,7 +93,9 @@ export function useGameMatch({ matchId, roomCode }: UseGameMatchOptions) {
     socket.on("game_timer_tick", onTick);
     socket.on("score_updated", onScoreUpdated);
     socket.on("game_finished", onFinished);
+    socket.on("game_cancelled", onCancelled);
     socket.on("opponent_disconnected", onOpponentDisconnected);
+    socket.on("turn_nudge", onTurnNudge);
 
     return () => {
       socket.off("game_started", onStarted);
@@ -86,7 +103,9 @@ export function useGameMatch({ matchId, roomCode }: UseGameMatchOptions) {
       socket.off("game_timer_tick", onTick);
       socket.off("score_updated", onScoreUpdated);
       socket.off("game_finished", onFinished);
+      socket.off("game_cancelled", onCancelled);
       socket.off("opponent_disconnected", onOpponentDisconnected);
+      socket.off("turn_nudge", onTurnNudge);
     };
   }, [socket, matchId, roomCode]);
 
@@ -97,5 +116,18 @@ export function useGameMatch({ matchId, roomCode }: UseGameMatchOptions) {
     [socket, matchId]
   );
 
-  return { payload, scores, remainingMs, status, result, opponentDisconnected, sendAction };
+  // Exit button, after the person has confirmed — the server decides
+  // forfeit vs. void depending on whether the rival is still connected
+  // (see leave_match in the backend's match_runner.py).
+  const leaveMatch = useCallback(() => {
+    socket?.emit("match:leave", { match_id: matchId });
+  }, [socket, matchId]);
+
+  // Turn-based games only (Connect Four, Dots and Boxes) — buzzes the
+  // rival once to remind them it's their move.
+  const nudgeOpponent = useCallback(() => {
+    socket?.emit("turn_nudge", { match_id: matchId });
+  }, [socket, matchId]);
+
+  return { payload, scores, remainingMs, status, result, cancelled, opponentDisconnected, sendAction, leaveMatch, nudgeOpponent };
 }
