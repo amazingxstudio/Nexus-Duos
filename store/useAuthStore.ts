@@ -23,6 +23,10 @@ export const useAuthStore = create<AuthState>()(
       setStatus: (status, error) => set({ status, error: error ?? null }),
       logout: () => set({ token: null, user: null, status: "idle", error: null }),
     }),
-    { name: "nexus-duos-auth", storage: createJSONStorage(() => sessionStorage), partialize: (state) => ({ token: state.token, user: state.user }) }
+    {
+      name: "nexus-duos-auth",
+      storage: createJSONStorage(() => localStorage), // sessionStorage → localStorage
+      partialize: (state) => ({ token: state.token, user: state.user }),
+    }
   )
 );
