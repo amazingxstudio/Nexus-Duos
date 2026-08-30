@@ -112,8 +112,18 @@ function ToggleRow({ icon: Icon, label, description, checked, onChange }: { icon
         <p className="text-sm font-medium text-ink-primary">{label}</p>
         {description && <p className="mt-0.5 text-xs text-ink-muted">{description}</p>}
       </div>
-      <button onClick={() => onChange(!checked)} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${checked ? "bg-cyan" : "bg-white/10"}`} aria-pressed={checked}>
-        <motion.span layout transition={{ type: "spring", stiffness: 500, damping: 32 }} className="absolute top-1 h-5 w-5 rounded-full bg-void" style={{ left: checked ? "26px" : "4px" }} />
+      <button
+        onClick={() => onChange(!checked)}
+        aria-pressed={checked}
+        style={{ background: checked ? "rgb(var(--color-cyan))" : "rgb(var(--color-ink-primary) / 0.16)" }}
+        className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+      >
+        <motion.span
+          layout
+          transition={{ type: "spring", stiffness: 500, damping: 32 }}
+          className="absolute top-1 h-5 w-5 rounded-full bg-white"
+          style={{ left: checked ? "26px" : "4px", boxShadow: "0 1px 3px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.06)" }}
+        />
       </button>
     </div>
   );
