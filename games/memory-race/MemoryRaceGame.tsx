@@ -8,6 +8,7 @@ import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
+import { hapticTap } from "@/lib/haptics";
 
 const DURATION_MS = 90 * 1000;
 const TILES = ["cyan", "magenta", "violet", "ember"] as const;
@@ -68,6 +69,7 @@ export function MemoryRaceGame({ matchId, roomCode, opponentId, gameKey }: { mat
 
     const matches = next.every((t, i) => t === sequence[i]);
     if (matches) {
+      hapticTap("medium");
       sendAction("submit_sequence", { taps: next });
     } else {
       setShake(true);
@@ -116,7 +118,8 @@ export function MemoryRaceGame({ matchId, roomCode, opponentId, gameKey }: { mat
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
               gap: 12,
-              width: 200,
+              width: 220,
+              boxSizing: "content-box",
               padding: 10,
               borderRadius: 22,
               border: phase === "input" ? "2px solid rgb(var(--color-cyan) / 0.6)" : "2px solid transparent",
@@ -132,8 +135,8 @@ export function MemoryRaceGame({ matchId, roomCode, opponentId, gameKey }: { mat
                   onClick={() => tap(tile)}
                   disabled={phase !== "input"}
                   style={{
-                    width: 94,
-                    height: 94,
+                    width: "100%",
+                    aspectRatio: "1",
                     borderRadius: 18,
                     border: "none",
                     background: TILE_COLOR[tile],
