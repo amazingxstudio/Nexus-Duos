@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { User, Trophy, Percent, Target, Lock, Bot, UserPlus, Check, Copy } from "lucide-react";
+import { User, Trophy, Percent, Target, Lock, Bot, EyeOff, UserPlus, Check, Copy } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getGameMeta } from "@/lib/games";
@@ -11,7 +11,7 @@ import { getGameMeta } from "@/lib/games";
 interface PublicProfile {
   nickname: string; player_id: string; photo_url?: string | null;
   total_matches: number; wins: number; losses: number; draws: number;
-  win_rate: number; total_score: number; history_visible: boolean;
+  win_rate: number; total_score: number; history_visible: boolean; is_friend: boolean;
 }
 
 interface MatchEntry {
@@ -32,7 +32,7 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
 
   useEffect(() => {
     apiFetch<PublicProfile>(`/profile/${playerId}`, { token })
-      .then(setProfile)
+      .then((res) => { setProfile(res); setAdded(res.is_friend); })
       .catch(() => setLoadError(true));
   }, [playerId, token]);
 
@@ -126,7 +126,13 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
                 {Icon && <span className="icon-badge h-9 w-9 shrink-0 bg-white/5"><Icon size={16} className="text-ink-muted" /></span>}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink-primary">{m.game}</p>
-                  {m.opponent.player_id ? <Link href={`/profile/${m.opponent.player_id}`} className="text-xs text-violet">vs {m.opponent.nickname}</Link> : <p className="flex items-center gap-1 text-xs text-ink-muted"><Bot size={11} /> vs AI</p>}
+                  {m.opponent.player_id ? (
+                    <Link href={`/profile/${m.opponent.player_id}`} className="text-xs text-violet">vs {m.opponent.nickname}</Link>
+                  ) : m.opponent.nickname === "AI" ? (
+                    <p className="flex items-center gap-1 text-xs text-ink-muted"><Bot size={11} /> vs AI</p>
+                  ) : (
+                    <p className="flex items-center gap-1 text-xs text-ink-muted"><EyeOff size={11} /> vs {m.opponent.nickname}</p>
+                  )}
                 </div>
                 <p className={`stat-mono text-xs font-semibold uppercase ${resultColor}`}>{m.result ?? "—"}</p>
               </motion.div>
