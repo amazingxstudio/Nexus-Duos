@@ -13,6 +13,7 @@ import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameVotingPanel } from "@/components/room/GameVotingPanel";
 import { GameDispatcher } from "@/components/room/GameDispatcher";
 import { getGameMeta } from "@/lib/games";
+import { unlockAudio } from "@/lib/sound";
 
 // Next.js 14 passes dynamic route params synchronously (not a Promise).
 export default function RoomPage({ params }: { params: { code: string } }) {
@@ -116,7 +117,7 @@ export default function RoomPage({ params }: { params: { code: string } }) {
             {ready ? (
               <LoadingProgress label="Waiting for opponent…" />
             ) : (
-              <button onClick={() => socket?.emit("player_ready", { room_id: room.id })} className="btn-primary">
+              <button onClick={() => { unlockAudio(); socket?.emit("player_ready", { room_id: room.id }); }} className="btn-primary">
                 <Check size={16} strokeWidth={2.5} />
                 I&apos;m Ready
               </button>
