@@ -10,7 +10,16 @@ declare global {
       ready: () => void; expand: () => void; disableVerticalSwipes?: () => void;
       setHeaderColor?: (color: string) => void; setBackgroundColor?: (color: string) => void;
       initData: string; initDataUnsafe: Record<string, unknown>;
-      HapticFeedback?: { impactOccurred: (style: string) => void }; colorScheme: "light" | "dark";
+      HapticFeedback?: {
+        impactOccurred: (style: "light" | "medium" | "heavy" | "rigid" | "soft") => void;
+        notificationOccurred: (type: "error" | "success" | "warning") => void;
+        selectionChanged: () => void;
+      };
+      colorScheme: "light" | "dark";
+      /** Bot API 6.4+. Reads the device clipboard through Telegram's native
+       * bridge — needed because the standard navigator.clipboard.readText()
+       * is blocked inside Telegram's in-app WebView on most platforms. */
+      readTextFromClipboard?: (callback: (text: string) => void) => void;
     }; };
   }
 }
