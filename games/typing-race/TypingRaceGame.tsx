@@ -6,6 +6,7 @@ import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
+import { hapticTap } from "@/lib/haptics";
 
 const DURATION_MS = 90 * 1000;
 
@@ -31,6 +32,7 @@ export function TypingRaceGame({ matchId, roomCode, opponentId, gameKey }: { mat
   useEffect(() => {
     if (!sentence || status !== "active") return;
     if (typed.trim().toLowerCase() === sentence.trim().toLowerCase()) {
+      hapticTap("medium");
       sendAction("submit_text", { text: typed });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
