@@ -163,7 +163,7 @@ export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { ma
               {showNudge && (
                 <motion.button
                   initial={{ opacity: 0, scale: 0.7 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  animate={{ opacity: nudgeOnCooldown ? 0.5 : 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.7 }}
                   onClick={nudge}
                   disabled={nudgeOnCooldown}
@@ -182,7 +182,6 @@ export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { ma
                     background: "rgb(var(--color-void) / 0.92)",
                     color: "rgb(var(--color-ember))",
                     boxShadow: "0 2px 12px rgb(0 0 0 / 0.3)",
-                    opacity: nudgeOnCooldown ? 0.5 : 1,
                   }}
                 >
                   <BellRing size={15} className={nudgeOnCooldown ? "" : "animate-pulse-glow"} />
