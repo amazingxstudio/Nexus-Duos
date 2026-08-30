@@ -70,6 +70,10 @@ body {
 .selectable {
   -webkit-user-select: text;
   user-select: text;
+  /* body sets touch-callout: none globally so long-press never shows
+     iOS's Select/Copy/Paste menu — undo that here so fields that need
+     native paste (e.g. the join-code input) get the normal callout. */
+  -webkit-touch-callout: default;
 }
 
 /* Referenced via inline style (not the animate-float utility) by
