@@ -12,8 +12,12 @@ import { hapticTap } from "@/lib/haptics";
 
 const DURATION_MS = 90 * 1000;
 const COLS = 6;
-const CELL = 48;
-const GAP = 6;
+// Packed tight and with no per-cell box around them (see the shared panel
+// below) — a small gap is the whole point: it's what makes the grid read
+// as one dense field of icons to scan instead of a set of easy-to-isolate
+// slots, which is what made the odd one too easy to spot before.
+const CELL = 44;
+const GAP = 2;
 
 const SHAPES: Record<string, LucideIcon> = { circle: Circle, square: Square, triangle: Triangle, star: Star, heart: Heart, hexagon: Hexagon, diamond: Diamond };
 const ACCENT_COLOR: Record<string, string> = {
@@ -36,8 +40,12 @@ export function FindTheDifferentGame({ matchId, roomCode, opponentId, gameKey }:
   const accent = (payload.accent as string) ?? "cyan";
   const color = ACCENT_COLOR[accent] ?? ACCENT_COLOR.cyan;
 
+  // Shape rounds use the *same* icon everywhere — the odd cell is only a
+  // subtle rotation away from the rest, not a different silhouette, so it
+  // can't be spotted from its outline alone.
   const BaseIcon = kind === "shape" ? SHAPES[payload.base_shape as string] ?? Circle : null;
-  const OddIcon = kind === "shape" ? SHAPES[payload.odd_shape as string] ?? Square : null;
+  const OddIcon = kind === "shape" ? SHAPES[payload.odd_shape as string] ?? BaseIcon : null;
+  const oddRotation = (payload.odd_rotation as number) ?? 0;
   const baseGlyph = payload.base_glyph as string | undefined;
   const oddGlyph = payload.odd_glyph as string | undefined;
 
@@ -63,48 +71,66 @@ export function FindTheDifferentGame({ matchId, roomCode, opponentId, gameKey }:
           <p style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgb(var(--color-ink-muted))" }}>
             Tap the one that&apos;s different
           </p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${COLS}, ${CELL}px)`,
-              gap: GAP,
-              width: boardWidth,
-            }}
-          >
-            {Array.from({ length: gridSize }).map((_, i) => {
-              const isOdd = i === oddIndex;
-              return (
-                <motion.button
-                  key={i}
-                  onClick={() => select(i)}
-                  disabled={status !== "active"}
-                  animate={wrongIndex === i ? { x: [0, -5, 5, -3, 3, 0] } : { x: 0 }}
-                  transition={{ duration: 0.28 }}
-                  style={{
-                    width: CELL,
-                    height: CELL,
-                    borderRadius: 12,
-                    border: `1px solid ${wrongIndex === i ? "rgb(var(--color-magenta) / 0.5)" : "rgb(var(--color-ink-primary) / 0.1)"}`,
-                    background: "rgb(var(--color-surface))",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: status === "active" ? "pointer" : "default",
-                  }}
-                >
-                  {kind === "shape" ? (
-                    (() => {
-                      const Icon = isOdd ? OddIcon! : BaseIcon!;
-                      return <Icon size={22} color={color} fill={color} fillOpacity={0.18} strokeWidth={2} />;
-                    })()
-                  ) : (
-                    <span className="stat-mono" style={{ fontSize: 20, fontWeight: 700, color }}>
-                      {isOdd ? oddGlyph : baseGlyph}
-                    </span>
-                  )}
-                </motion.button>
-              );
-            })}
+          {/* One shared panel behind the whole grid — no per-cell box, so
+              there's nothing pre-segmenting the grid into easy-to-scan
+              slots. The icons/glyphs just sit packed together on one
+              continuous surface, which is what actually makes finding the
+              odd one take real scanning. */}
+          <div className="glass-panel" style={{ padding: 10 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${COLS}, ${CELL}px)`,
+                gap: GAP,
+                width: boardWidth,
+              }}
+            >
+              {Array.from({ length: gridSize }).map((_, i) => {
+                const isOdd = i === oddIndex;
+                const isWrong = wrongIndex === i;
+                return (
+                  <motion.button
+                    key={i}
+                    onClick={() => select(i)}
+                    disabled={status !== "active"}
+                    animate={isWrong ? { x: [0, -5, 5, -3, 3, 0] } : { x: 0 }}
+                    transition={{ duration: 0.28 }}
+                    style={{
+                      width: CELL,
+                      height: CELL,
+                      border: "none",
+                      background: "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: status === "active" ? "pointer" : "default",
+                    }}
+                  >
+                    {kind === "shape" ? (
+                      (() => {
+                        const Icon = isOdd ? OddIcon! : BaseIcon!;
+                        const rotation = isOdd ? oddRotation : 0;
+                        const iconColor = isWrong ? "rgb(var(--color-magenta))" : color;
+                        return (
+                          <Icon
+                            size={22}
+                            color={iconColor}
+                            fill={iconColor}
+                            fillOpacity={0.18}
+                            strokeWidth={2}
+                            style={{ transform: `rotate(${rotation}deg)` }}
+                          />
+                        );
+                      })()
+                    ) : (
+                      <span className="stat-mono" style={{ fontSize: 20, fontWeight: 700, color: isWrong ? "rgb(var(--color-magenta))" : color }}>
+                        {isOdd ? oddGlyph : baseGlyph}
+                      </span>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </GameShell>
