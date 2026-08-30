@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Delete, CornerDownLeft } from "lucide-react";
+import { Delete, Check } from "lucide-react";
 import { useGameMatch } from "@/games/engine/useGameMatch";
 import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
@@ -15,9 +15,10 @@ const DURATION_MS = 90 * 1000;
 const TURN_SECONDS = 6;
 const MAX_OVERTIME_SECONDS = 4;
 
-// Letter rows only — backspace and confirm live inside the keyboard itself
-// as real keys (last letter row + a full-width bottom row), not a
-// separately-styled action bar, so the whole thing reads as one keyboard.
+// Letter rows only — confirm and backspace live inside the last row as
+// real keys (confirm on the left, backspace on the right, same as a
+// Wordle-style keyboard's Enter/⌫ pair), never as a separate labeled
+// "Confirm" bar, so the whole thing reads as one keyboard.
 const LETTER_ROWS = [
   ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
   ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
@@ -44,9 +45,26 @@ export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matc
   const [now, setNow] = useState(Date.now());
   const firedTimeoutRef = useRef<number | null>(null); // turn_started_at we've already reported a timeout for
 
+  // The keyboard is pinned with position: fixed to the literal bottom of
+  // the screen (like a bottom nav bar), completely outside GameShell's own
+  // padded/scrollable content column. That means it overlaps whatever's
+  // behind it, so we measure its real rendered height and reserve that
+  // much space at the bottom of the content column above it — otherwise
+  // the turn card could end up centered partly behind the keyboard.
+  const keyboardRef = useRef<HTMLDivElement>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(id);
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = keyboardRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => setKeyboardHeight(entry.contentRect.height));
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   const turnUserId = payload?.turn_user_id as string | undefined;
@@ -139,12 +157,11 @@ export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matc
   return (
     <>
       <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
-        {/* This whole block fills GameShell's content area exactly — the
-            top section (turn state, current word) takes the leftover
-            space and the keyboard sits pinned to the bottom of it, so
-            it's always reachable without the page ever needing to
-            scroll to find it. */}
-        <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%", maxWidth: 380 }}>
+        {/* The keyboard itself is rendered fixed to the screen below, so
+            this column only holds the turn card. paddingBottom reserves
+            exactly the keyboard's measured height so the card centers in
+            the space above it instead of ending up partly hidden behind it. */}
+        <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%", maxWidth: 380, paddingBottom: keyboardHeight }}>
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
             <motion.div
               animate={{
@@ -243,42 +260,51 @@ export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matc
               </div>
             </motion.div>
           </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingBottom: 4 }}>
-            {LETTER_ROWS.map((row, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "center", gap: 4 }}>
-                {row.map((letter) => (
-                  <button key={letter} onClick={() => tapLetter(letter)} disabled={keysDisabled} style={{ ...keyStyle, flex: 1, maxWidth: 34 }}>
-                    {letter}
-                  </button>
-                ))}
-                {i === LETTER_ROWS.length - 1 && (
-                  <button onClick={backspace} disabled={keysDisabled} style={{ ...keyStyle, flex: 1.6, maxWidth: 54 }}>
-                    <Delete size={16} />
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              onClick={confirm}
-              disabled={keysDisabled || !typed}
-              style={{
-                ...keyStyle,
-                width: "100%",
-                background: "rgb(var(--color-cyan))",
-                color: "rgb(var(--color-void))",
-                fontSize: 14,
-                fontWeight: 700,
-                gap: 6,
-                opacity: keysDisabled || !typed ? 0.4 : 1,
-              }}
-            >
-              <CornerDownLeft size={16} />
-              Confirm
-            </button>
-          </div>
         </div>
       </GameShell>
+
+      {/* Pinned to the literal bottom edge of the phone screen — like a
+          bottom navigation bar, not a panel that lives inside GameShell's
+          own padded/scrollable column. inset-x-0 + bottom-0 with no outer
+          margin means it sits flush against the screen edge; the real
+          BottomNav is already hidden while a match is in progress, so
+          there's nothing underneath it to collide with. */}
+      <div
+        ref={keyboardRef}
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-surface/95 backdrop-blur-glass"
+        style={{ paddingLeft: 10, paddingRight: 10, paddingTop: 8, paddingBottom: "max(env(safe-area-inset-bottom), 10px)" }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, maxWidth: 380, margin: "0 auto" }}>
+          {LETTER_ROWS.map((row, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "center", gap: 4 }}>
+              {/* Confirm lives here as a plain key — same size and style as
+                  backspace, just a checkmark — instead of a separately
+                  labeled "Confirm" bar underneath the keyboard. */}
+              {i === LETTER_ROWS.length - 1 && (
+                <button
+                  onClick={confirm}
+                  disabled={keysDisabled || !typed}
+                  aria-label="Confirm word"
+                  style={{ ...keyStyle, flex: 1.6, maxWidth: 54, color: "rgb(var(--color-cyan))", opacity: keysDisabled || !typed ? 0.4 : 1 }}
+                >
+                  <Check size={17} strokeWidth={2.5} />
+                </button>
+              )}
+              {row.map((letter) => (
+                <button key={letter} onClick={() => tapLetter(letter)} disabled={keysDisabled} style={{ ...keyStyle, flex: 1, maxWidth: 34 }}>
+                  {letter}
+                </button>
+              ))}
+              {i === LETTER_ROWS.length - 1 && (
+                <button onClick={backspace} disabled={keysDisabled} style={{ ...keyStyle, flex: 1.6, maxWidth: 54 }}>
+                  <Delete size={16} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {status === "finished" && result && userId && (
         <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} />
       )}
