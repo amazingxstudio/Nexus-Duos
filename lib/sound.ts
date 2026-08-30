@@ -50,6 +50,17 @@ function tone(freq: number, startOffset: number, duration: number, type: Oscilla
   osc.stop(t0 + duration + 0.03);
 }
 
+/** Call this from a genuine, early tap handler (e.g. the "I'm Ready"
+ * button, which happens before every match). Browsers only let an
+ * AudioContext actually produce audible sound if it's created/resumed as
+ * a direct result of a real user gesture — every sound call in this file
+ * fires later, from a socket event (match end), which is never a gesture,
+ * so without this the context can end up silently stuck "suspended"
+ * forever and none of the sounds below ever actually play. */
+export function unlockAudio() {
+  getCtx();
+}
+
 /** Bright ascending arpeggio. */
 export function playWinSound() {
   if (!soundEnabled()) return;
