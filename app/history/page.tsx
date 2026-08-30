@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Trophy, Frown, Minus, Bot, RefreshCw } from "lucide-react";
+import { Trophy, Frown, Minus, Bot, EyeOff, RefreshCw } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getGameMeta } from "@/lib/games";
@@ -56,7 +56,13 @@ export default function HistoryPage() {
               <div className="min-w-0 flex-1">
                 <p className="font-display text-sm font-semibold text-ink-primary">{m.game}</p>
                 <p className="text-xs text-ink-muted">{m.mode === "PRACTICE_AI" ? "Practice · AI" : "Ranked"} · {new Date(m.date).toLocaleDateString()}</p>
-                {m.opponent.player_id ? <Link href={`/profile/${m.opponent.player_id}`} className="text-xs text-violet">vs {m.opponent.nickname}</Link> : <p className="flex items-center gap-1 text-xs text-ink-muted"><Bot size={12} /> vs AI</p>}
+                {m.opponent.player_id ? (
+                  <Link href={`/profile/${m.opponent.player_id}`} className="text-xs text-violet">vs {m.opponent.nickname}</Link>
+                ) : m.opponent.nickname === "AI" ? (
+                  <p className="flex items-center gap-1 text-xs text-ink-muted"><Bot size={12} /> vs AI</p>
+                ) : (
+                  <p className="flex items-center gap-1 text-xs text-ink-muted"><EyeOff size={12} /> vs {m.opponent.nickname}</p>
+                )}
               </div>
               <div className="text-right">
                 <p className="stat-mono text-sm text-ink-primary">{m.self.score} – {m.opponent.score}</p>
