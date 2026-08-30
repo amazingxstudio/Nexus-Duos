@@ -21,11 +21,19 @@
   --color-ink-primary: 245 247 255;
   --color-ink-muted: 139 147 176;
   --color-ink-faint: 74 79 102;
+  /* How strong the ambient background orbs read at. Dark theme keeps this
+     fairly restrained — several large, fully-saturated orbs overlapping
+     in the middle of the screen (where panels actually sit) blend toward
+     a muddy grey-brown rather than reading as "colorful", so less is more
+     here. Light backgrounds wash color out much faster, so light theme
+     below pushes this up instead of down. */
+  --orb-opacity: 0.13;
 }
 
 /* Light theme — toggled via the .theme-light class on <html> (see ThemeProvider) */
 .theme-light {
   color-scheme: light;
+  --orb-opacity: 0.4;
   --color-void: 243 244 250;
   --color-surface: 255 255 255;
   --color-surface-raised: 237 239 247;
@@ -62,6 +70,15 @@ body {
 .selectable {
   -webkit-user-select: text;
   user-select: text;
+}
+
+/* Referenced via inline style (not the animate-float utility) by
+   AmbientBackground.tsx's orbs — defined as plain CSS so it's never at
+   risk of Tailwind's content-based tree-shaking dropping it because no
+   scanned file uses the animate-float/animate-float-delay class anymore. */
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(12px, -18px); }
 }
 
 img {
