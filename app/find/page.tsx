@@ -78,23 +78,26 @@ export default function FindPage() {
   // Standard navigator.clipboard.readText() is blocked inside Telegram's
   // in-app WebView on most platforms (no permission prompt ever appears,
   // it just rejects) — Telegram's own bridge method is what actually works
-  // there. Fall back to the standard API for anything running outside
-  // Telegram (e.g. testing in a normal desktop browser).
+  // there, but it's unreliable on some Telegram clients/versions and can
+  // report an empty clipboard even when there's something on it. So this
+  // button is just a shortcut, not the only way in: the join-code field
+  // itself is a normal editable field (see below), so a long-press on it
+  // always offers the native Select/Copy/Paste menu as a fallback.
   async function pasteCode() {
     setError(null);
     const tgClipboard = window.Telegram?.WebApp?.readTextFromClipboard;
     if (tgClipboard) {
       tgClipboard((text) => {
-        if (text) setJoinCode(text.trim());
-        else setError("Clipboard is empty.");
+        if (text) setJoinCode(text.trim().toUpperCase());
+        else setError("Couldn't read the clipboard automatically — long-press the box above to paste instead.");
       });
       return;
     }
     try {
       const text = await navigator.clipboard.readText();
-      if (text) setJoinCode(text.trim());
+      if (text) setJoinCode(text.trim().toUpperCase());
     } catch {
-      setError("Couldn't read the clipboard — paste isn't available here.");
+      setError("Couldn't read the clipboard automatically — long-press the box above to paste instead.");
     }
   }
 
@@ -137,14 +140,19 @@ export default function FindPage() {
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="flex flex-col gap-3">
-        {/* readOnly on purpose — this field is filled via the Paste button
-            only, never the on-screen keyboard, so tapping it can never pop
-            the keyboard up over the rest of the page. */}
+        {/* Not readOnly — a readOnly field greys out "Paste" in the native
+            long-press menu on most mobile browsers, which is exactly what
+            we need people to be able to use when Telegram's clipboard
+            bridge is unavailable. inputMode="none" is what actually keeps
+            the on-screen keyboard from popping up on tap; the field stays
+            editable so long-press still gives the normal Select/Copy/Paste
+            callout (see .selectable in globals.css). */}
         <div className="glass-panel flex items-center gap-2 px-4 py-3">
           <Hash size={16} className="text-ink-faint shrink-0" />
           <input
             value={joinCode}
-            readOnly
+            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+            inputMode="none"
             placeholder="Paste a room code…"
             className="selectable stat-mono w-full bg-transparent text-ink-primary outline-none placeholder:text-ink-faint"
           />
