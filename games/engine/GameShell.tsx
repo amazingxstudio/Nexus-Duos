@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { WifiOff, LogOut, X, Ban } from "lucide-react";
 
 interface GameShellProps {
@@ -15,17 +15,27 @@ interface GameShellProps {
    * side was already disconnected) — replaces the whole shell with a
    * neutral "match cancelled" screen instead of the normal game view. */
   cancelled?: boolean;
+  /** Bumped by useGameMatch every time the rival sends a turn-nudge —
+   * shakes the whole screen briefly as the reminder. */
+  nudgeSignal?: number;
   /** Exit button, after the confirm dialog. Server decides forfeit vs.
    * void based on whether the rival is still connected. */
   onLeave: () => void;
   children: React.ReactNode;
 }
 
-export function GameShell({ remainingMs, totalMs, myScore, opponentScore, opponentDisconnected, cancelled, onLeave, children }: GameShellProps) {
+export function GameShell({ remainingMs, totalMs, myScore, opponentScore, opponentDisconnected, cancelled, nudgeSignal, onLeave, children }: GameShellProps) {
   const router = useRouter();
   const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const shakeControls = useAnimation();
   const pct = remainingMs !== null ? Math.max(0, Math.min(100, (remainingMs / totalMs) * 100)) : 100;
   const urgent = pct < 20;
+
+  useEffect(() => {
+    if (!nudgeSignal) return;
+    shakeControls.start({ x: [0, -14, 14, -10, 10, -6, 6, 0], transition: { duration: 0.5, ease: "easeInOut" } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nudgeSignal]);
 
   function confirmLeave() {
     onLeave();
@@ -49,7 +59,7 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 pb-8 pt-6">
+    <motion.div animate={shakeControls} className="flex h-full min-h-0 flex-col overflow-y-auto px-4 pb-8 pt-6">
       <div className="mb-4 flex items-center gap-3">
         <div className="glass-panel h-2 flex-1 overflow-hidden rounded-full">
           <motion.div
@@ -124,7 +134,7 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 

@@ -28,6 +28,11 @@ export function useGameMatch({ matchId, roomCode }: UseGameMatchOptions) {
   // from `status === "finished"` so MatchResultOverlay (win/lose sound,
   // rematch prompt) never renders for something nobody really won.
   const [cancelled, setCancelled] = useState(false);
+  // Increments every time the rival nudges us — GameShell watches this to
+  // trigger a visible screen-shake, which works everywhere (unlike
+  // vibration, which does nothing on Telegram Desktop/Web and can be easy
+  // to miss even on mobile).
+  const [nudgeSignal, setNudgeSignal] = useState(0);
   const joinedRef = useRef(false);
 
   // The "game_started" broadcast fires exactly once, right as the match
@@ -83,6 +88,7 @@ export function useGameMatch({ matchId, roomCode }: UseGameMatchOptions) {
     }
     function onTurnNudge(data: { match_id: string }) {
       if (data.match_id !== matchId) return;
+      setNudgeSignal((n) => n + 1);
       if (typeof navigator !== "undefined" && "vibrate" in navigator) {
         navigator.vibrate([200, 100, 200]);
       }
@@ -129,5 +135,5 @@ export function useGameMatch({ matchId, roomCode }: UseGameMatchOptions) {
     socket?.emit("turn_nudge", { match_id: matchId });
   }, [socket, matchId]);
 
-  return { payload, scores, remainingMs, status, result, cancelled, opponentDisconnected, sendAction, leaveMatch, nudgeOpponent };
+  return { payload, scores, remainingMs, status, result, cancelled, opponentDisconnected, nudgeSignal, sendAction, leaveMatch, nudgeOpponent };
 }
