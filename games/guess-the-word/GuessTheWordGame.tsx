@@ -7,6 +7,7 @@ import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
+import { hapticTap } from "@/lib/haptics";
 
 const DURATION_MS = 90 * 1000;
 
@@ -28,6 +29,7 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
 
   function submit() {
     if (status !== "active" || guess.trim() === "") return;
+    hapticTap("medium");
     sendAction("submit_guess", { guess: guess.trim() });
   }
 
