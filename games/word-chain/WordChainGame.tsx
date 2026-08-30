@@ -2,21 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Delete, CornerDownLeft } from "lucide-react";
 import { useGameMatch } from "@/games/engine/useGameMatch";
 import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
+import { hapticTap } from "@/lib/haptics";
 
 const DURATION_MS = 90 * 1000;
-const TURN_SECONDS = 4;
+const TURN_SECONDS = 6;
 const MAX_OVERTIME_SECONDS = 4;
 
-// A custom on-screen QWERTY layout — deliberately not a text <input>, so
-// the phone's own keyboard (with its word-prediction/autocomplete) never
-// gets a chance to hand the player a hint mid-round.
-const KEY_ROWS = [
+// Letter rows only — backspace and confirm live inside the keyboard itself
+// as real keys (last letter row + a full-width bottom row), not a
+// separately-styled action bar, so the whole thing reads as one keyboard.
+const LETTER_ROWS = [
   ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
   ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
   ["Z", "X", "C", "V", "B", "N", "M"],
@@ -98,165 +100,182 @@ export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matc
   const elapsedSec = turnStartedAt ? (now - turnStartedAt) / 1000 : 0;
   const countdown = TURN_SECONDS - elapsedSec; // can go negative — that's intentional
   const overtime = countdown < 0;
+  const keysDisabled = !myTurn || status !== "active";
 
   function tapLetter(letter: string) {
-    if (!myTurn || status !== "active") return;
+    if (keysDisabled) return;
+    hapticTap("light");
     setTyped((t) => (t.length < 20 ? t + letter.toLowerCase() : t));
   }
   function backspace() {
-    if (!myTurn || status !== "active") return;
+    if (keysDisabled) return;
+    hapticTap("light");
     setTyped((t) => t.slice(0, -1));
   }
   function confirm() {
-    if (!myTurn || status !== "active" || !typed) return;
+    if (keysDisabled || !typed) return;
+    hapticTap("medium");
     sendAction("submit_word", { word: typed });
   }
 
   const myScore = userId ? (scores[userId] ?? 0) : 0;
   const opponentScore = scores[opponentId] ?? 0;
-  const keysDisabled = !myTurn || status !== "active";
+
+  const keyStyle: React.CSSProperties = {
+    height: 40,
+    borderRadius: 8,
+    border: "none",
+    background: "rgb(var(--color-surface))",
+    color: "rgb(var(--color-ink-primary))",
+    fontSize: 13,
+    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: keysDisabled ? 0.4 : 1,
+    cursor: keysDisabled ? "default" : "pointer",
+  };
 
   return (
     <>
       <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, width: "100%", maxWidth: 380 }}>
-          <p
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: myTurn ? "rgb(var(--color-cyan))" : "rgb(var(--color-ink-muted))",
-            }}
-          >
-            {myTurn ? "Your turn" : "Rival's turn"}
-          </p>
-
-          <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", height: 30 }}>
-            <span
-              className="stat-mono"
-              style={{ fontSize: 20, fontWeight: 700, color: overtime ? "rgb(var(--color-magenta))" : "rgb(var(--color-ink-primary))" }}
+        {/* This whole block fills GameShell's content area exactly — the
+            top section (turn state, current word) takes the leftover
+            space and the keyboard sits pinned to the bottom of it, so
+            it's always reachable without the page ever needing to
+            scroll to find it. */}
+        <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%", maxWidth: 380 }}>
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <motion.div
+              animate={{
+                borderColor: myTurn ? "rgb(var(--color-cyan) / 0.4)" : "rgb(var(--color-ink-primary) / 0.08)",
+                boxShadow: myTurn ? "0 0 22px rgb(var(--color-cyan) / 0.18)" : "0 0 0 rgba(0,0,0,0)",
+              }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 10,
+                width: "100%",
+                padding: "16px 14px",
+                borderRadius: 20,
+                border: "1.5px solid",
+              }}
             >
-              {countdown.toFixed(1)}s
-            </span>
-            <AnimatePresence>
-              {flash && (
-                <motion.span
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: -16 }}
-                  exit={{ opacity: 0 }}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    whiteSpace: "nowrap",
-                    color: flash.startsWith("+") ? "rgb(var(--color-cyan))" : flash.startsWith("-") ? "rgb(var(--color-magenta))" : "rgb(var(--color-ember))",
-                  }}
-                >
-                  {flash}
-                </motion.span>
+              <p
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: myTurn ? "rgb(var(--color-cyan))" : "rgb(var(--color-ink-muted))",
+                }}
+              >
+                {myTurn ? "● Your turn" : "Rival's turn"}
+              </p>
+
+              {/* The countdown only ever means something to the player who
+                  can actually act on it — showing it during the rival's
+                  turn was just confusing, so it's hidden then. */}
+              {myTurn && (
+                <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", height: 28 }}>
+                  <span
+                    className="stat-mono"
+                    style={{ fontSize: 20, fontWeight: 700, color: overtime ? "rgb(var(--color-magenta))" : "rgb(var(--color-ink-primary))" }}
+                  >
+                    {Math.ceil(countdown)}s
+                  </span>
+                </div>
               )}
-            </AnimatePresence>
+
+              <div style={{ position: "relative" }}>
+                <motion.p
+                  key={currentWord}
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="stat-mono"
+                  style={{ fontSize: 26, fontWeight: 700 }}
+                >
+                  {currentWord.slice(0, -1)}
+                  <span style={{ color: "rgb(var(--color-cyan))" }}>{currentWord.slice(-1)}</span>
+                </motion.p>
+                <AnimatePresence>
+                  {flash && (
+                    <motion.span
+                      initial={{ opacity: 0, y: 0 }}
+                      animate={{ opacity: 1, y: -18 }}
+                      exit={{ opacity: 0 }}
+                      style={{
+                        position: "absolute",
+                        top: -4,
+                        left: "50%",
+                        translateX: "-50%",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        whiteSpace: "nowrap",
+                        color: flash.startsWith("+") ? "rgb(var(--color-cyan))" : flash.startsWith("-") ? "rgb(var(--color-magenta))" : "rgb(var(--color-ember))",
+                      }}
+                    >
+                      {flash}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </div>
+              <p style={{ fontSize: 11, color: "rgb(var(--color-ink-faint))" }}>Next word must start with “{lastLetter}” · nouns only</p>
+
+              <div
+                style={{
+                  minHeight: 40,
+                  width: "100%",
+                  borderRadius: 12,
+                  border: "1px solid rgb(var(--color-ink-primary) / 0.14)",
+                  background: "rgb(var(--color-surface))",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                  color: "rgb(var(--color-ink-primary))",
+                }}
+              >
+                {typed || <span style={{ color: "rgb(var(--color-ink-faint))" }}>{myTurn ? "Type a word…" : "Waiting…"}</span>}
+              </div>
+            </motion.div>
           </div>
 
-          <p style={{ fontSize: 11, color: "rgb(var(--color-ink-faint))" }}>Next word must start with “{lastLetter}”</p>
-
-          <motion.p
-            key={currentWord}
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="stat-mono"
-            style={{ fontSize: 26, fontWeight: 700 }}
-          >
-            {currentWord.slice(0, -1)}
-            <span style={{ color: "rgb(var(--color-cyan))" }}>{currentWord.slice(-1)}</span>
-          </motion.p>
-
-          <div
-            style={{
-              minHeight: 40,
-              width: "100%",
-              borderRadius: 12,
-              border: "1px solid rgb(var(--color-ink-primary) / 0.14)",
-              background: "rgb(var(--color-surface))",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18,
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
-              color: "rgb(var(--color-ink-primary))",
-            }}
-          >
-            {typed || <span style={{ color: "rgb(var(--color-ink-faint))" }}>{myTurn ? "Type a word…" : "Waiting…"}</span>}
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
-            {KEY_ROWS.map((row, i) => (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingBottom: 4 }}>
+            {LETTER_ROWS.map((row, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "center", gap: 4 }}>
                 {row.map((letter) => (
-                  <button
-                    key={letter}
-                    onClick={() => tapLetter(letter)}
-                    disabled={keysDisabled}
-                    style={{
-                      flex: 1,
-                      maxWidth: 34,
-                      height: 40,
-                      borderRadius: 8,
-                      border: "none",
-                      background: "rgb(var(--color-surface))",
-                      color: "rgb(var(--color-ink-primary))",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      opacity: keysDisabled ? 0.4 : 1,
-                      cursor: keysDisabled ? "default" : "pointer",
-                    }}
-                  >
+                  <button key={letter} onClick={() => tapLetter(letter)} disabled={keysDisabled} style={{ ...keyStyle, flex: 1, maxWidth: 34 }}>
                     {letter}
                   </button>
                 ))}
+                {i === LETTER_ROWS.length - 1 && (
+                  <button onClick={backspace} disabled={keysDisabled} style={{ ...keyStyle, flex: 1.6, maxWidth: 54 }}>
+                    <Delete size={16} />
+                  </button>
+                )}
               </div>
             ))}
-            <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 2 }}>
-              <button
-                onClick={backspace}
-                disabled={keysDisabled}
-                style={{
-                  flex: 1.4,
-                  height: 40,
-                  borderRadius: 8,
-                  border: "none",
-                  background: "rgb(var(--color-ink-primary) / 0.1)",
-                  color: "rgb(var(--color-ink-primary))",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  opacity: keysDisabled ? 0.4 : 1,
-                  cursor: keysDisabled ? "default" : "pointer",
-                }}
-              >
-                ⌫
-              </button>
-              <button
-                onClick={confirm}
-                disabled={keysDisabled || !typed}
-                style={{
-                  flex: 2,
-                  height: 40,
-                  borderRadius: 8,
-                  border: "none",
-                  background: "rgb(var(--color-cyan))",
-                  color: "rgb(var(--color-void))",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  opacity: keysDisabled || !typed ? 0.4 : 1,
-                  cursor: keysDisabled || !typed ? "default" : "pointer",
-                }}
-              >
-                Confirm
-              </button>
-            </div>
+            <button
+              onClick={confirm}
+              disabled={keysDisabled || !typed}
+              style={{
+                ...keyStyle,
+                width: "100%",
+                background: "rgb(var(--color-cyan))",
+                color: "rgb(var(--color-void))",
+                fontSize: 14,
+                fontWeight: 700,
+                gap: 6,
+                opacity: keysDisabled || !typed ? 0.4 : 1,
+              }}
+            >
+              <CornerDownLeft size={16} />
+              Confirm
+            </button>
           </div>
         </div>
       </GameShell>
