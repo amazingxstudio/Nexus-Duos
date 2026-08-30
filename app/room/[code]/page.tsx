@@ -57,7 +57,11 @@ export default function RoomPage({ params }: { params: { code: string } }) {
   }, [socket, code, joinedChannel, setJoinedChannel]);
 
   useEffect(() => {
-    setInGame(room?.code === code && room?.status === "IN_PROGRESS");
+    // Keep the bottom nav hidden through "FINISHED" too — the result
+    // overlay (below) is a full-screen modal, so there's no reason for the
+    // regular nav to reappear underneath it until the player actually
+    // navigates away.
+    setInGame(room?.code === code && (room?.status === "IN_PROGRESS" || room?.status === "FINISHED"));
     return () => setInGame(false);
   }, [room?.status, room?.code, code, setInGame]);
 
@@ -85,7 +89,7 @@ export default function RoomPage({ params }: { params: { code: string } }) {
     <main className="flex min-h-dvh flex-col px-5 pb-28 pt-8">
       <header className="mb-6 text-center"><p className="stat-mono text-xs text-violet">{room.code}</p></header>
 
-      {room.status !== "IN_PROGRESS" && (
+      {room.status !== "IN_PROGRESS" && room.status !== "FINISHED" && (
         <section className="glass-panel mb-6 flex items-stretch p-1">
           <PlayerCard side="cyan" name={user?.profile?.nickname ?? "You"} playerId={user?.profile?.player_id} photoUrl={user?.photo_url} />
           <div className="duel-seam mx-1 my-4" />
@@ -125,7 +129,17 @@ export default function RoomPage({ params }: { params: { code: string } }) {
           </motion.div>
         )}
 
-        {room.status === "IN_PROGRESS" && room.match_id && room.game && opponent && (
+        {/* Stay mounted through "FINISHED", not just "IN_PROGRESS" — each
+            game component shows its own MatchResultOverlay once its
+            internal match status flips to "finished" (see e.g.
+            WordChainGame), but that only ever gets a chance to render if
+            GameDispatcher is still on screen when it happens. Unmounting
+            the instant room.status left "IN_PROGRESS" (which used to
+            happen here) tore the whole game tree down before the result
+            card could ever appear — the room would just fall through to
+            showing the "connected players" panel above, or nothing at
+            all, instead of the win/loss card. */}
+        {(room.status === "IN_PROGRESS" || room.status === "FINISHED") && room.match_id && room.game && opponent && (
           <motion.div
             key="game"
             initial={{ opacity: 0 }}
