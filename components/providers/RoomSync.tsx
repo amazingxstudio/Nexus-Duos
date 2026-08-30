@@ -48,18 +48,35 @@ export function RoomSync() {
       // this arrives — see the store's pendingMatchStart doc comment.
       setPendingMatchStart({ match_id: data.match_id, payload: data.payload, duration_ms: data.duration_ms });
     }
+    // Nothing previously told the active-room store that a match had
+    // actually ended — room.status just stayed "IN_PROGRESS" forever,
+    // which is what let the return-to-match button and other
+    // room-status-dependent UI go on believing a finished match was still
+    // live until the player happened to open a different room.
+    function onGameFinished(data: { match_id: string }) {
+      if (data.match_id !== room?.match_id) return;
+      patchRoom({ status: "FINISHED" });
+    }
+    function onGameCancelled(data: { match_id: string }) {
+      if (data.match_id !== room?.match_id) return;
+      patchRoom({ status: "FINISHED" });
+    }
 
     socket.on("room_joined", onRoomJoined);
     socket.on("vote:resolved", onVoteResolved);
     socket.on("player_ready", onPlayerReady);
     socket.on("game_started", onGameStarted);
+    socket.on("game_finished", onGameFinished);
+    socket.on("game_cancelled", onGameCancelled);
     return () => {
       socket.off("room_joined", onRoomJoined);
       socket.off("vote:resolved", onVoteResolved);
       socket.off("player_ready", onPlayerReady);
       socket.off("game_started", onGameStarted);
+      socket.off("game_finished", onGameFinished);
+      socket.off("game_cancelled", onGameCancelled);
     };
-  }, [socket, setRoom, patchRoom, setReady, setOpponentReady, setPendingMatchStart]);
+  }, [socket, room?.match_id, setRoom, patchRoom, setReady, setOpponentReady, setPendingMatchStart]);
 
   // Once both sides are ready, tell the server to start — exactly once per
   // match, regardless of which page (if any) happens to be on screen when
