@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Trophy, Frown, Minus, Swords, Home, RefreshCw, Check } from "lucide-react";
+import { Trophy, Frown, Minus, Swords, Home, RefreshCw, Check, UserPlus } from "lucide-react";
 import { useSocket } from "@/components/providers/SocketProvider";
+import { useAuthStore } from "@/store/useAuthStore";
+import { apiFetch } from "@/lib/api";
 import { playWinSound, playLoseSound, playDrawSound } from "@/lib/sound";
+import { hapticNotify } from "@/lib/haptics";
 
 interface MatchResultOverlayProps {
   myScore: number;
@@ -20,18 +23,20 @@ type RematchState = "idle" | "waiting" | "declined";
 
 export function MatchResultOverlay({ myScore, opponentScore, didWin, gameKey, opponentId }: MatchResultOverlayProps) {
   const socket = useSocket();
+  const token = useAuthStore((s) => s.token);
   const [rematch, setRematch] = useState<RematchState>("idle");
+  const [friendAdded, setFriendAdded] = useState(false);
 
   const title = didWin === null ? "Draw" : didWin ? "Victory" : "Defeat";
   const accent = didWin === null ? "text-ink-primary" : didWin ? "text-cyan" : "text-magenta";
   const glow = didWin === null ? "" : didWin ? "shadow-glow-cyan" : "shadow-glow-magenta";
   const Icon = didWin === null ? Minus : didWin ? Trophy : Frown;
 
-  // Fire the result sound once, right as the overlay mounts.
+  // Fire the result sound + haptic once, right as the overlay mounts.
   useEffect(() => {
-    if (didWin === null) playDrawSound();
-    else if (didWin) playWinSound();
-    else playLoseSound();
+    if (didWin === null) { playDrawSound(); hapticNotify("warning"); }
+    else if (didWin) { playWinSound(); hapticNotify("success"); }
+    else { playLoseSound(); hapticNotify("error"); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -55,6 +60,18 @@ export function MatchResultOverlay({ myScore, opponentScore, didWin, gameKey, op
     if (rematch === "waiting") return;
     socket?.emit("invite:send", { to_user_id: opponentId, game_key: gameKey, is_rematch: true });
     setRematch("waiting");
+  }
+
+  // Only the opponent's user_id is on hand here (not their player_id), so
+  // this goes through /players/friends' user_id lookup path.
+  async function addFriend() {
+    if (friendAdded) return;
+    try {
+      await apiFetch("/players/friends", { method: "POST", token, body: JSON.stringify({ user_id: opponentId }) });
+      setFriendAdded(true);
+    } catch {
+      // Non-critical — leave the button tappable again on failure.
+    }
   }
 
   return (
@@ -85,6 +102,10 @@ export function MatchResultOverlay({ myScore, opponentScore, didWin, gameKey, op
             </button>
             <Link href="/" className="btn-ghost"><Home size={16} strokeWidth={2.25} />Home</Link>
           </div>
+          <button onClick={addFriend} disabled={friendAdded} className="flex items-center gap-1.5 text-xs text-ink-muted disabled:text-cyan">
+            {friendAdded ? <Check size={12} /> : <UserPlus size={12} />}
+            {friendAdded ? "Added as friend" : "Add as friend"}
+          </button>
           {rematch === "waiting" && (
             <p className="flex items-center gap-1.5 text-xs text-ink-muted">
               <Check size={12} className="text-cyan" />Waiting for your rival to confirm…
