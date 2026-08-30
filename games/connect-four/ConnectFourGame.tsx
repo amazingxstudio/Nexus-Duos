@@ -8,6 +8,7 @@ import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
+import { hapticTap } from "@/lib/haptics";
 
 const DURATION_MS = 5 * 60_000;
 const ROWS = 6;
@@ -28,7 +29,7 @@ const GAP = 4;
 
 export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
-  const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, leaveMatch, nudgeOpponent } = useGameMatch({ matchId, roomCode });
+  const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, nudgeSignal, leaveMatch, nudgeOpponent } = useGameMatch({ matchId, roomCode });
   const [now, setNow] = useState(Date.now());
   const [turnStartedLocal, setTurnStartedLocal] = useState(Date.now());
   const [nudgeCooldownUntil, setNudgeCooldownUntil] = useState(0);
@@ -55,6 +56,7 @@ export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { ma
 
   function dropDisc(column: number) {
     if (!myTurn || status !== "active" || board[0][column] !== null) return;
+    hapticTap("light");
     sendAction("drop_disc", { column });
   }
 
@@ -72,7 +74,7 @@ export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { ma
 
   return (
     <>
-      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
+      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch} nudgeSignal={nudgeSignal}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           <p
             style={{
@@ -86,48 +88,21 @@ export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { ma
             {gameOver ? "Game over" : myTurn ? "Your move" : "Rival's move"}
           </p>
 
-          <AnimatePresence>
-            {showNudge && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                onClick={nudge}
-                disabled={nudgeOnCooldown}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  border: "1px solid rgb(var(--color-ember) / 0.35)",
-                  background: "rgb(var(--color-ember) / 0.1)",
-                  color: "rgb(var(--color-ember))",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  opacity: nudgeOnCooldown ? 0.5 : 1,
-                }}
-              >
-                <BellRing size={13} />
-                {nudgeOnCooldown ? "Nudged" : "Nudge rival"}
-              </motion.button>
-            )}
-          </AnimatePresence>
-
-          <div
-            style={{
-              display: "flex",
-              gap: GAP,
-              padding: 10,
-              borderRadius: 16,
-              border: "1px solid rgb(var(--color-ink-primary) / 0.1)",
-              background: "rgb(var(--color-surface))",
-              width: boardWidth + 20,
-            }}
-          >
-            {Array.from({ length: COLS }).map((_, col) => {
-              const colFull = board[0][col] !== null;
-              return (
+          <div style={{ position: "relative" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: GAP,
+                padding: 10,
+                borderRadius: 16,
+                border: "1px solid rgb(var(--color-ink-primary) / 0.1)",
+                background: "rgb(var(--color-surface))",
+                width: boardWidth + 20,
+              }}
+            >
+              {Array.from({ length: COLS }).map((_, col) => {
+                const colFull = board[0][col] !== null;
+                return (
                 <button
                   key={col}
                   onClick={() => dropDisc(col)}
@@ -182,6 +157,38 @@ export function ConnectFourGame({ matchId, roomCode, opponentId, gameKey }: { ma
                 </button>
               );
             })}
+            </div>
+
+            <AnimatePresence>
+              {showNudge && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.7 }}
+                  onClick={nudge}
+                  disabled={nudgeOnCooldown}
+                  aria-label="Nudge rival"
+                  style={{
+                    position: "absolute",
+                    top: -10,
+                    right: -10,
+                    width: 34,
+                    height: 34,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1px solid rgb(var(--color-ember) / 0.4)",
+                    background: "rgb(var(--color-void) / 0.92)",
+                    color: "rgb(var(--color-ember))",
+                    boxShadow: "0 2px 12px rgb(0 0 0 / 0.3)",
+                    opacity: nudgeOnCooldown ? 0.5 : 1,
+                  }}
+                >
+                  <BellRing size={15} className={nudgeOnCooldown ? "" : "animate-pulse-glow"} />
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
 
           {isDraw && <p style={{ fontSize: 12, color: "rgb(var(--color-ink-muted))" }}>Board full — it&apos;s a draw</p>}
