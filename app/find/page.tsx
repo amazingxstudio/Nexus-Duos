@@ -75,7 +75,21 @@ export default function FindPage() {
     }
   }
 
+  // Standard navigator.clipboard.readText() is blocked inside Telegram's
+  // in-app WebView on most platforms (no permission prompt ever appears,
+  // it just rejects) — Telegram's own bridge method is what actually works
+  // there. Fall back to the standard API for anything running outside
+  // Telegram (e.g. testing in a normal desktop browser).
   async function pasteCode() {
+    setError(null);
+    const tgClipboard = window.Telegram?.WebApp?.readTextFromClipboard;
+    if (tgClipboard) {
+      tgClipboard((text) => {
+        if (text) setJoinCode(text.trim());
+        else setError("Clipboard is empty.");
+      });
+      return;
+    }
     try {
       const text = await navigator.clipboard.readText();
       if (text) setJoinCode(text.trim());
@@ -93,9 +107,9 @@ export default function FindPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center gap-8 px-6 pb-16 pt-12">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex w-full max-w-xs items-start justify-between">
-        <div className="text-center">
+    <main className="flex min-h-dvh flex-col px-5 pb-28 pt-8">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-start justify-between gap-3">
+        <div>
           <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Matchmaking</p>
           <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">Find your duel</h1>
         </div>
@@ -110,29 +124,19 @@ export default function FindPage() {
         transition={{ delay: 0.05 }}
         onClick={createRoom}
         disabled={loading !== null || authStatus !== "authenticated"}
-        className="btn-primary w-full max-w-xs"
+        className="btn-primary"
       >
         {loading === "create" ? <Loader2 size={18} className="animate-spin" /> : <Swords size={18} strokeWidth={2.25} />}
         {loading === "create" ? "Creating…" : authStatus !== "authenticated" ? "Signing you in…" : "Create Room"}
       </motion.button>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="flex w-full max-w-xs items-center gap-3 text-ink-muted"
-      >
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="my-6 flex items-center gap-3 text-ink-muted">
         <div className="h-px flex-1 bg-white/10" />
         <span className="text-xs uppercase tracking-widest">or join</span>
         <div className="h-px flex-1 bg-white/10" />
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="flex w-full max-w-xs flex-col gap-3"
-      >
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="flex flex-col gap-3">
         {/* readOnly on purpose — this field is filled via the Paste button
             only, never the on-screen keyboard, so tapping it can never pop
             the keyboard up over the rest of the page. */}
@@ -153,14 +157,14 @@ export default function FindPage() {
             <ClipboardPaste size={15} />
           </button>
         </div>
-        <button onClick={joinRoom} disabled={loading !== null || !joinCode.trim() || authStatus !== "authenticated"} className="btn-ghost w-full">
+        <button onClick={joinRoom} disabled={loading !== null || !joinCode.trim() || authStatus !== "authenticated"} className="btn-ghost">
           {loading === "join" ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} strokeWidth={2.25} />}
           {authStatus !== "authenticated" ? "Signing you in…" : "Join Room"}
         </button>
       </motion.div>
 
       {onlineFriends.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="w-full max-w-xs">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-8">
           <p className="mb-3 text-xs uppercase tracking-wide text-ink-muted">Friends online now</p>
           <div className="flex flex-col gap-2">
             {onlineFriends.map((f) => (
@@ -180,10 +184,10 @@ export default function FindPage() {
       )}
 
       {authStatus !== "authenticated" && (
-        <p className="text-xs text-ember">Signing you in with Telegram — please wait a moment…</p>
+        <p className="mt-6 text-center text-xs text-ember">Signing you in with Telegram — please wait a moment…</p>
       )}
       {error && (
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-magenta">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 text-center text-sm text-magenta">
           {error}
         </motion.p>
       )}
