@@ -2,15 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Delete, Check } from "lucide-react";
+import { Delete, CornerDownLeft } from "lucide-react";
 import { useGameMatch } from "@/games/engine/useGameMatch";
 import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
+import { hapticTap } from "@/lib/haptics";
 
 const DURATION_MS = 90 * 1000;
-const DIAL_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "-", "0", "del"];
+// Confirm lives inside the keypad itself as its own key — no separate
+// button to reach outside the pad. No "-" key either: every problem the
+// backend generates (addition, subtraction with the larger number first,
+// multiplication) always has a non-negative answer, so it was dead weight.
+const DIAL_ROWS = [
+  ["1", "2", "3"],
+  ["4", "5", "6"],
+  ["7", "8", "9"],
+  ["del", "0", "confirm"],
+];
 
 export function QuickMathGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
@@ -29,30 +39,32 @@ export function QuickMathGame({ matchId, roomCode, opponentId, gameKey }: { matc
   const op = payload.op as string;
   const answer = payload.answer as number;
 
-  function tapKey(key: string) {
-    if (status !== "active") return;
-    if (key === "del") {
-      setValue((v) => v.slice(0, -1));
-      return;
-    }
-    if (key === "-") {
-      // Only meaningful as the very first character.
-      setValue((v) => (v === "" ? "-" : v));
-      return;
-    }
-    setValue((v) => (v.length < 6 ? v + key : v));
-  }
-
   function submit() {
-    if (status !== "active" || value === "" || value === "-") return;
+    if (status !== "active" || value === "") return;
     const parsed = Number(value);
     if (Number.isFinite(parsed) && parsed === answer) {
+      hapticTap("medium");
       sendAction("submit_answer", { value: parsed });
     } else {
       setShake(true);
       setTimeout(() => setShake(false), 350);
     }
     setValue("");
+  }
+
+  function tapKey(key: string) {
+    if (status !== "active") return;
+    if (key === "del") {
+      hapticTap("light");
+      setValue((v) => v.slice(0, -1));
+      return;
+    }
+    if (key === "confirm") {
+      submit();
+      return;
+    }
+    hapticTap("light");
+    setValue((v) => (v.length < 6 ? v + key : v));
   }
 
   const myScore = userId ? (scores[userId] ?? 0) : 0;
@@ -91,52 +103,37 @@ export function QuickMathGame({ matchId, roomCode, opponentId, gameKey }: { matc
             {value || <span style={{ color: "rgb(var(--color-ink-faint))", fontWeight: 400, fontSize: 16 }}>?</span>}
           </motion.div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, width: "100%" }}>
-            {DIAL_KEYS.map((key) => (
-              <button
-                key={key}
-                onClick={() => tapKey(key)}
-                disabled={status !== "active"}
-                style={{
-                  aspectRatio: "1",
-                  borderRadius: "50%",
-                  border: "none",
-                  background: "rgb(var(--color-surface))",
-                  color: "rgb(var(--color-ink-primary))",
-                  fontSize: 20,
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {key === "del" ? <Delete size={18} /> : key}
-              </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+            {DIAL_ROWS.map((row, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                {row.map((key) => {
+                  const isConfirm = key === "confirm";
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => tapKey(key)}
+                      disabled={status !== "active" || (isConfirm && value === "")}
+                      style={{
+                        aspectRatio: "1",
+                        borderRadius: isConfirm ? 18 : "50%",
+                        border: "none",
+                        background: isConfirm ? "rgb(var(--color-cyan))" : "rgb(var(--color-surface))",
+                        color: isConfirm ? "rgb(var(--color-void))" : "rgb(var(--color-ink-primary))",
+                        fontSize: 20,
+                        fontWeight: 600,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: isConfirm && value === "" ? 0.5 : 1,
+                      }}
+                    >
+                      {key === "del" ? <Delete size={18} /> : isConfirm ? <CornerDownLeft size={20} strokeWidth={2.5} /> : key}
+                    </button>
+                  );
+                })}
+              </div>
             ))}
           </div>
-
-          <button
-            onClick={submit}
-            disabled={status !== "active" || value === "" || value === "-"}
-            style={{
-              width: "100%",
-              padding: "14px 0",
-              borderRadius: 999,
-              border: "none",
-              background: "rgb(var(--color-cyan))",
-              color: "rgb(var(--color-void))",
-              fontWeight: 700,
-              fontSize: 15,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              opacity: value === "" || value === "-" ? 0.5 : 1,
-            }}
-          >
-            <Check size={16} strokeWidth={2.5} />
-            Submit
-          </button>
 
           <p style={{ fontSize: 11, color: "rgb(var(--color-ink-faint))", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Fastest correct answer scores
