@@ -39,7 +39,9 @@ export default function FriendsPage() {
   }, [socket]);
 
   useEffect(() => {
-    if (query.trim().length < 3) { setResults([]); return; }
+    // Player IDs are always exactly 11 characters ("NDUO-" + 6) — only
+    // search once the whole thing has been entered, not on a partial match.
+    if (query.trim().length < 11) { setResults([]); return; }
     const timeout = setTimeout(() => {
       apiFetch<{ players: PlayerCard[] }>(`/players/search?query=${encodeURIComponent(query.trim())}`, { token }).then((res) => setResults(res.players));
     }, 300);
