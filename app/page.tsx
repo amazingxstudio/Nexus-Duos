@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Swords, Bot, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
+import { Swords, Bot, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { GAMES, ACCENT_CLASSES } from "@/lib/games";
@@ -74,14 +74,9 @@ export default function HomePage() {
 
   return (
     <motion.main variants={container} initial="hidden" animate="show" className="flex min-h-dvh flex-col px-5 pb-28 pt-8">
-      <motion.header variants={item} className="mb-8 flex items-start justify-between gap-3">
-        <div>
-          <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Nexus Duos</p>
-          <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">{headline}</h1>
-        </div>
-        <Link href="/friends" className="icon-badge h-10 w-10 glass-panel shrink-0" aria-label="Friends">
-          <Users size={18} className="text-ink-muted" />
-        </Link>
+      <motion.header variants={item} className="mb-8">
+        <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Nexus Duos</p>
+        <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">{headline}</h1>
       </motion.header>
 
       <motion.section variants={item} className="glass-panel flex items-stretch p-1">
