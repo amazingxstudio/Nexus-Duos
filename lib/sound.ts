@@ -50,6 +50,32 @@ function tone(freq: number, startOffset: number, duration: number, type: Oscilla
   osc.stop(t0 + duration + 0.03);
 }
 
+/** A short burst of white noise with its decay baked straight into the
+ * buffer — used for the confetti "pop" below, since a pure oscillator
+ * tone() can't produce a percussive/noisy texture on its own. */
+function noiseBurst(startOffset: number, duration: number, peakGain: number) {
+  const ctx = getCtx();
+  if (!ctx) return;
+  const sampleCount = Math.max(1, Math.floor(ctx.sampleRate * duration));
+  const buffer = ctx.createBuffer(1, sampleCount, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < sampleCount; i++) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / sampleCount);
+  }
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const gain = ctx.createGain();
+  const t0 = ctx.currentTime + startOffset;
+  gain.gain.setValueAtTime(peakGain, t0);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+
+  source.connect(gain);
+  gain.connect(ctx.destination);
+  source.start(t0);
+  source.stop(t0 + duration + 0.02);
+}
+
 /** Call this from a genuine, early tap handler (e.g. the "I'm Ready"
  * button, which happens before every match). Browsers only let an
  * AudioContext actually produce audible sound if it's created/resumed as
@@ -83,4 +109,12 @@ export function playDrawSound() {
 export function playTickSound() {
   if (!soundEnabled()) return;
   tone(880, 0, 0.12, "sine", 0.08);
+}
+
+/** Confetti "pop" — a quick noise burst plus a high-pitched click layered
+ * on top, timed to fire right as the win-screen confetti particles burst. */
+export function playConfettiPopSound() {
+  if (!soundEnabled()) return;
+  noiseBurst(0, 0.12, 0.18);
+  tone(1800, 0, 0.08, "sine", 0.09);
 }
