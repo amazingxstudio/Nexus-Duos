@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { GameInvitePickerSheet } from "@/components/room/GameInvitePickerSheet";
+import { OutgoingInviteToast } from "@/components/room/OutgoingInviteToast";
 
 interface RoomResponse {
   room: { code: string };
@@ -16,10 +17,11 @@ interface RoomResponse {
 
 interface PlayerCard {
   user_id: string; nickname: string; player_id: string; photo_url?: string | null; online: boolean;
+  last_seen_at?: string | null; last_seen_label?: string;
 }
 
 export default function FindPage() {
-  const { token, status: authStatus } = useAuthStore();
+  const { token } = useAuthStore();
   const socket = useSocket();
   const router = useRouter();
   const [joinCode, setJoinCode] = useState("");
@@ -28,6 +30,7 @@ export default function FindPage() {
   const [friends, setFriends] = useState<PlayerCard[]>([]);
   const [sentInvite, setSentInvite] = useState<string | null>(null);
   const [pickerFor, setPickerFor] = useState<PlayerCard | null>(null);
+  const [pendingInvite, setPendingInvite] = useState<{ user_id: string; nickname: string } | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -43,10 +46,11 @@ export default function FindPage() {
     return () => { socket.off("friend_status_changed", onStatus); };
   }, [socket]);
 
-  const onlineFriends = friends.filter((f) => f.online);
+  // Show every friend here (not just online ones) so offline friends'
+  // last-seen label has somewhere to render — online friends sort first.
+  const sortedFriends = [...friends].sort((a, b) => Number(b.online) - Number(a.online));
 
   async function createRoom() {
-    if (authStatus !== "authenticated") return;
     setLoading("create");
     setError(null);
     try {
@@ -59,7 +63,7 @@ export default function FindPage() {
   }
 
   async function joinRoom() {
-    if (!joinCode.trim() || authStatus !== "authenticated") return;
+    if (!joinCode.trim()) return;
     setLoading("join");
     setError(null);
     try {
@@ -105,6 +109,7 @@ export default function FindPage() {
     if (!pickerFor) return;
     socket?.emit("invite:send", { to_user_id: pickerFor.user_id, game_key: gameKey });
     setSentInvite(pickerFor.user_id);
+    setPendingInvite({ user_id: pickerFor.user_id, nickname: pickerFor.nickname });
     setPickerFor(null);
     setTimeout(() => setSentInvite(null), 3000);
   }
@@ -116,7 +121,12 @@ export default function FindPage() {
           <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Matchmaking</p>
           <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">Find your duel</h1>
         </div>
-        <Link href="/friends" className="icon-badge h-10 w-10 glass-panel shrink-0" aria-label="Friends">
+        <Link
+          href="/friends"
+          className="icon-badge h-10 w-10 glass-panel shrink-0"
+          aria-label="Friends"
+          style={{ marginTop: "max(env(safe-area-inset-top), 12px)" }}
+        >
           <Users size={18} className="text-ink-muted" />
         </Link>
       </motion.div>
@@ -126,11 +136,11 @@ export default function FindPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
         onClick={createRoom}
-        disabled={loading !== null || authStatus !== "authenticated"}
+        disabled={loading !== null}
         className="btn-primary"
       >
         {loading === "create" ? <Loader2 size={18} className="animate-spin" /> : <Swords size={18} strokeWidth={2.25} />}
-        {loading === "create" ? "Creating…" : authStatus !== "authenticated" ? "Signing you in…" : "Create Room"}
+        {loading === "create" ? "Creating…" : "Create Room"}
       </motion.button>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="my-6 flex items-center gap-3 text-ink-muted">
@@ -165,35 +175,37 @@ export default function FindPage() {
             <ClipboardPaste size={15} />
           </button>
         </div>
-        <button onClick={joinRoom} disabled={loading !== null || !joinCode.trim() || authStatus !== "authenticated"} className="btn-ghost">
+        <button onClick={joinRoom} disabled={loading !== null || !joinCode.trim()} className="btn-ghost">
           {loading === "join" ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} strokeWidth={2.25} />}
-          {authStatus !== "authenticated" ? "Signing you in…" : "Join Room"}
+          Join Room
         </button>
       </motion.div>
 
-      {onlineFriends.length > 0 && (
+      {sortedFriends.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-8">
-          <p className="mb-3 text-xs uppercase tracking-wide text-ink-muted">Friends online now</p>
+          <p className="mb-3 text-xs uppercase tracking-wide text-ink-muted">Friends</p>
           <div className="flex flex-col gap-2">
-            {onlineFriends.map((f) => (
+            {sortedFriends.map((f) => (
               <div key={f.user_id} className="glass-panel flex items-center gap-3 p-3">
                 <div className="relative shrink-0">
                   <div className="h-9 w-9 overflow-hidden rounded-full bg-surface-raised bg-cover bg-center" style={f.photo_url ? { backgroundImage: `url(${f.photo_url})` } : undefined} />
-                  <Circle size={9} className="absolute -bottom-0.5 -right-0.5 fill-cyan text-cyan" />
+                  {f.online && <Circle size={9} className="absolute -bottom-0.5 -right-0.5 fill-cyan text-cyan" />}
                 </div>
-                <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink-primary">{f.nickname}</p>
-                <button onClick={() => setPickerFor(f)} disabled={sentInvite === f.user_id} className="icon-badge h-9 w-9 shrink-0 bg-cyan text-void disabled:opacity-50">
-                  <Swords size={15} />
-                </button>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink-primary">{f.nickname}</p>
+                  {!f.online && <p className="truncate text-xs text-ink-muted">{f.last_seen_label ?? "Last seen recently"}</p>}
+                </div>
+                {f.online && (
+                  <button onClick={() => setPickerFor(f)} disabled={sentInvite === f.user_id} className="icon-badge h-9 w-9 shrink-0 bg-cyan text-void disabled:opacity-50">
+                    <Swords size={15} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
         </motion.div>
       )}
 
-      {authStatus !== "authenticated" && (
-        <p className="mt-6 text-center text-xs text-ember">Signing you in with Telegram — please wait a moment…</p>
-      )}
       {error && (
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 text-center text-sm text-magenta">
           {error}
@@ -201,6 +213,7 @@ export default function FindPage() {
       )}
 
       <GameInvitePickerSheet target={pickerFor} onClose={() => setPickerFor(null)} onPick={sendInvite} />
+      <OutgoingInviteToast target={pendingInvite} onDismiss={() => setPendingInvite(null)} />
     </main>
   );
 }
