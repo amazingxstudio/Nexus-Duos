@@ -27,7 +27,15 @@ declare global {
        * chat-list "Open" button's fullscreen launch. */
       requestFullscreen?: () => void;
       isFullscreen?: boolean;
+      /** Device-level safe area (notches, status bar, home indicator). */
       safeAreaInset?: { top: number; bottom: number; left: number; right: number };
+      /** Bot API 8.0+. Space to avoid Telegram's own floating UI (the
+       * header's Close/collapse/⋮ controls in fullscreen mode) — separate
+       * from the device's safeAreaInset above. This is the one that
+       * matters for content sitting under a fullscreen header. */
+      contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number };
+      onEvent?: (eventType: string, callback: () => void) => void;
+      offEvent?: (eventType: string, callback: () => void) => void;
     }; };
   }
 }
@@ -47,6 +55,33 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     tg.ready(); tg.expand(); tg.requestFullscreen?.(); tg.disableVerticalSwipes?.();
     tg.setHeaderColor?.("#06060B"); tg.setBackgroundColor?.("#06060B");
 
+    // Mirror Telegram's safe-area insets onto CSS variables ourselves —
+    // belt and suspenders alongside the --tg-*-inset-* vars Telegram's own
+    // script sets, so pages relying on --app-safe-* (see globals.css) stay
+    // correct even on a client where that hasn't landed on the CSS side
+    // yet, and so they update live when entering/exiting fullscreen.
+    function syncSafeAreaVars() {
+      const root = document.documentElement.style;
+      const safe = tg!.safeAreaInset;
+      const content = tg!.contentSafeAreaInset;
+      if (safe) {
+        root.setProperty("--tg-safe-area-inset-top", `${safe.top}px`);
+        root.setProperty("--tg-safe-area-inset-bottom", `${safe.bottom}px`);
+        root.setProperty("--tg-safe-area-inset-left", `${safe.left}px`);
+        root.setProperty("--tg-safe-area-inset-right", `${safe.right}px`);
+      }
+      if (content) {
+        root.setProperty("--tg-content-safe-area-inset-top", `${content.top}px`);
+        root.setProperty("--tg-content-safe-area-inset-bottom", `${content.bottom}px`);
+        root.setProperty("--tg-content-safe-area-inset-left", `${content.left}px`);
+        root.setProperty("--tg-content-safe-area-inset-right", `${content.right}px`);
+      }
+    }
+    syncSafeAreaVars();
+    tg.onEvent?.("safeAreaChanged", syncSafeAreaVars);
+    tg.onEvent?.("contentSafeAreaChanged", syncSafeAreaVars);
+    tg.onEvent?.("fullscreenChanged", syncSafeAreaVars);
+
     async function authenticate() {
       if (!hasRestoredSession) setStatus("authenticating");
       try {
@@ -57,6 +92,12 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       }
     }
     void authenticate();
+
+    return () => {
+      tg.offEvent?.("safeAreaChanged", syncSafeAreaVars);
+      tg.offEvent?.("contentSafeAreaChanged", syncSafeAreaVars);
+      tg.offEvent?.("fullscreenChanged", syncSafeAreaVars);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
