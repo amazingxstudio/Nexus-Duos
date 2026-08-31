@@ -20,6 +20,14 @@ declare global {
        * bridge — needed because the standard navigator.clipboard.readText()
        * is blocked inside Telegram's in-app WebView on most platforms. */
       readTextFromClipboard?: (callback: (text: string) => void) => void;
+      /** Bot API 8.0+. Expands the WebView to true fullscreen (hides
+       * Telegram's own compact WebView chrome) — the in-chat inline
+       * "Open" button launches compact by default, so the app has to
+       * request this itself once loaded to match the persistent
+       * chat-list "Open" button's fullscreen launch. */
+      requestFullscreen?: () => void;
+      isFullscreen?: boolean;
+      safeAreaInset?: { top: number; bottom: number; left: number; right: number };
     }; };
   }
 }
@@ -36,7 +44,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       if (!hasRestoredSession) setStatus("error", "NOT_IN_TELEGRAM");
       return;
     }
-    tg.ready(); tg.expand(); tg.disableVerticalSwipes?.();
+    tg.ready(); tg.expand(); tg.requestFullscreen?.(); tg.disableVerticalSwipes?.();
     tg.setHeaderColor?.("#06060B"); tg.setBackgroundColor?.("#06060B");
 
     async function authenticate() {
