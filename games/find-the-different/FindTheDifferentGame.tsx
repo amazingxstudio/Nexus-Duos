@@ -11,13 +11,16 @@ import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
 import { hapticTap } from "@/lib/haptics";
 
 const DURATION_MS = 90 * 1000;
-const COLS = 6;
+const COLS = 8;
 // Packed tight and with no per-cell box around them (see the shared panel
 // below) — a small gap is the whole point: it's what makes the grid read
 // as one dense field of icons to scan instead of a set of easy-to-isolate
-// slots, which is what made the odd one too easy to spot before.
-const CELL = 44;
-const GAP = 2;
+// slots, which is what made the odd one too easy to spot before. Bumped
+// alongside the 8x8 grid for a bit more breathing room between cells;
+// CELL is sized down to keep the whole board around 300-320px wide on a
+// typical 360-390px phone (8*32 + 7*8 = 312).
+const CELL = 32;
+const GAP = 8;
 
 const SHAPES: Record<string, LucideIcon> = { circle: Circle, square: Square, triangle: Triangle, star: Star, heart: Heart, hexagon: Hexagon, diamond: Diamond };
 const ACCENT_COLOR: Record<string, string> = {
@@ -34,7 +37,7 @@ export function FindTheDifferentGame({ matchId, roomCode, opponentId, gameKey }:
 
   if (!payload) return <LoadingProgress label="Waiting for match to start…" />;
 
-  const kind = payload.kind as "shape" | "glyph";
+  const kind = payload.kind as "shape" | "glyph" | "rotate";
   const oddIndex = payload.odd_index as number;
   const gridSize = payload.grid_size as number;
   const accent = (payload.accent as string) ?? "cyan";
@@ -48,6 +51,9 @@ export function FindTheDifferentGame({ matchId, roomCode, opponentId, gameKey }:
   const oddRotation = (payload.odd_rotation as number) ?? 0;
   const baseGlyph = payload.base_glyph as string | undefined;
   const oddGlyph = payload.odd_glyph as string | undefined;
+  // Rotate rounds render the *same* character in every cell — the odd one
+  // is just flipped 180°, so there's no separate base/odd pair to track.
+  const rotateGlyph = payload.glyph as string | undefined;
 
   function select(index: number) {
     if (status !== "active") return;
@@ -122,9 +128,22 @@ export function FindTheDifferentGame({ matchId, roomCode, opponentId, gameKey }:
                           />
                         );
                       })()
-                    ) : (
+                    ) : kind === "glyph" ? (
                       <span className="stat-mono" style={{ fontSize: 20, fontWeight: 700, color: isWrong ? "rgb(var(--color-magenta))" : color }}>
                         {isOdd ? oddGlyph : baseGlyph}
+                      </span>
+                    ) : (
+                      <span
+                        className="stat-mono"
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 700,
+                          color: isWrong ? "rgb(var(--color-magenta))" : color,
+                          display: "inline-block",
+                          transform: isOdd ? "rotate(180deg)" : "none",
+                        }}
+                      >
+                        {rotateGlyph}
                       </span>
                     )}
                   </motion.button>
