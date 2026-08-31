@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Eye, Volume2, Vibrate, RefreshCw, Sun, Moon, SunMoon } from "lucide-react";
+import { Eye, EyeOff, Volume2, Vibrate, RefreshCw, Sun, Moon, SunMoon, Trophy, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useThemeStore, ThemeMode } from "@/store/useThemeStore";
 
-interface Settings { show_history_to_all: boolean; sound_enabled: boolean; haptics_enabled: boolean; }
+interface Settings {
+  show_history_to_all: boolean; sound_enabled: boolean; haptics_enabled: boolean;
+  show_online_status: boolean; show_exact_last_seen: boolean;
+}
 
 const CACHE_KEY = "nexus_settings_cache";
 
@@ -100,23 +104,47 @@ export default function SettingsPage() {
         <ToggleRow icon={Volume2} label="Sound effects" checked={settings.sound_enabled} onChange={(v) => update({ sound_enabled: v })} />
         <ToggleRow icon={Vibrate} label="Haptic feedback" checked={settings.haptics_enabled} onChange={(v) => update({ haptics_enabled: v })} />
       </div>
+
+      <p className="mb-3 mt-6 text-xs uppercase tracking-wide text-ink-muted">Presence &amp; privacy</p>
+      <div className="flex flex-col gap-3">
+        <ToggleRow icon={Eye} label="Show online status" description="Off hides your online state and last seen from everyone" checked={settings.show_online_status} onChange={(v) => update({ show_online_status: v })} />
+        <ToggleRow
+          icon={EyeOff}
+          label="Show exact last seen"
+          description="Off shows friends \u201cLast seen recently\u201d instead of an exact time"
+          checked={settings.show_exact_last_seen}
+          onChange={(v) => update({ show_exact_last_seen: v })}
+          disabled={!settings.show_online_status}
+        />
+      </div>
+
+      <p className="mb-3 mt-6 text-xs uppercase tracking-wide text-ink-muted">More</p>
+      <Link href="/leaderboard" className="glass-card flex items-center gap-3 border border-white/[0.08] p-4">
+        <span className="icon-badge h-9 w-9 shrink-0 bg-cyan/10"><Trophy size={16} className="text-cyan" /></span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-ink-primary">Leaderboard</p>
+          <p className="mt-0.5 text-xs text-ink-muted">See how you rank against other players</p>
+        </div>
+        <ChevronRight size={16} className="shrink-0 text-ink-faint" />
+      </Link>
     </main>
   );
 }
 
-function ToggleRow({ icon: Icon, label, description, checked, onChange }: { icon: typeof Eye; label: string; description?: string; checked: boolean; onChange: (v: boolean) => void }) {
+function ToggleRow({ icon: Icon, label, description, checked, onChange, disabled }: { icon: typeof Eye; label: string; description?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
-    <div className="glass-panel flex items-center gap-3 p-4">
+    <div className={`glass-panel flex items-center gap-3 p-4 transition-opacity ${disabled ? "opacity-50" : ""}`}>
       <span className="icon-badge h-9 w-9 shrink-0 bg-white/5"><Icon size={16} className="text-ink-muted" /></span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink-primary">{label}</p>
         {description && <p className="mt-0.5 text-xs text-ink-muted">{description}</p>}
       </div>
       <button
-        onClick={() => onChange(!checked)}
+        onClick={() => !disabled && onChange(!checked)}
+        disabled={disabled}
         aria-pressed={checked}
         style={{ background: checked ? "rgb(var(--color-cyan))" : "rgb(var(--color-ink-primary) / 0.16)" }}
-        className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+        className="relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed"
       >
         <motion.span
           layout
