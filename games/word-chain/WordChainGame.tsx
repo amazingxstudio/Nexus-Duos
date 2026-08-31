@@ -140,12 +140,12 @@ export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matc
   const opponentScore = scores[opponentId] ?? 0;
 
   const keyStyle: React.CSSProperties = {
-    height: 40,
+    height: 72,
     borderRadius: 8,
     border: "none",
     background: "rgb(var(--color-surface))",
     color: "rgb(var(--color-ink-primary))",
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: 600,
     display: "flex",
     alignItems: "center",
@@ -274,7 +274,7 @@ export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matc
         className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-surface/95 backdrop-blur-glass"
         style={{ paddingLeft: 10, paddingRight: 10, paddingTop: 8, paddingBottom: "max(env(safe-area-inset-bottom), 10px)" }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, maxWidth: 380, margin: "0 auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 380, margin: "0 auto" }}>
           {LETTER_ROWS.map((row, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "center", gap: 4 }}>
               {/* Confirm lives here as a plain key — same size and style as
