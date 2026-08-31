@@ -27,13 +27,16 @@ declare global {
        * chat-list "Open" button's fullscreen launch. */
       requestFullscreen?: () => void;
       isFullscreen?: boolean;
-      /** Device-level safe area (notches, status bar, home indicator). */
-      safeAreaInset?: { top: number; bottom: number; left: number; right: number };
-      /** Bot API 8.0+. Space to avoid Telegram's own floating UI (the
-       * header's Close/collapse/⋮ controls in fullscreen mode) — separate
-       * from the device's safeAreaInset above. This is the one that
-       * matters for content sitting under a fullscreen header. */
+      /** Bot API 8.0+. Additional inset (on top of safeAreaInset) needed to
+       * avoid Telegram's OWN floating UI — the fullscreen mode's back
+       * caret / "⋮" more-options button that sit directly on top of the
+       * WebView content with no reserved header space. This is what
+       * top/bottom-right corner elements need to offset against; plain
+       * device safe-area (notch) isn't enough for them. */
       contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number };
+      safeAreaInset?: { top: number; bottom: number; left: number; right: number };
+      /** Bot API 6.1+. Standard event bus — used here to re-read the insets
+       * above whenever they change (entering/exiting fullscreen, rotation). */
       onEvent?: (eventType: string, callback: () => void) => void;
       offEvent?: (eventType: string, callback: () => void) => void;
     }; };
@@ -55,32 +58,28 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     tg.ready(); tg.expand(); tg.requestFullscreen?.(); tg.disableVerticalSwipes?.();
     tg.setHeaderColor?.("#06060B"); tg.setBackgroundColor?.("#06060B");
 
-    // Mirror Telegram's safe-area insets onto CSS variables ourselves —
-    // belt and suspenders alongside the --tg-*-inset-* vars Telegram's own
-    // script sets, so pages relying on --app-safe-* (see globals.css) stay
-    // correct even on a client where that hasn't landed on the CSS side
-    // yet, and so they update live when entering/exiting fullscreen.
-    function syncSafeAreaVars() {
+    // Telegram's WebView doesn't actually populate the standard CSS
+    // env(safe-area-inset-*) variables (0px always, confirmed Telegram-iOS
+    // bug), so we read the insets from Telegram's own JS bridge instead and
+    // republish them as CSS vars any component can use. contentSafeAreaInset
+    // in particular is what pages need to avoid the fullscreen mode's own
+    // floating back/"⋮" buttons, which safeAreaInset (device notch only)
+    // doesn't account for. Re-applied on the change events since insets
+    // shift when fullscreen/orientation changes after mount.
+    function applySafeAreaVars() {
+      const zero = { top: 0, bottom: 0, left: 0, right: 0 };
+      const safe = tg!.safeAreaInset ?? zero;
+      const content = tg!.contentSafeAreaInset ?? zero;
       const root = document.documentElement.style;
-      const safe = tg!.safeAreaInset;
-      const content = tg!.contentSafeAreaInset;
-      if (safe) {
-        root.setProperty("--tg-safe-area-inset-top", `${safe.top}px`);
-        root.setProperty("--tg-safe-area-inset-bottom", `${safe.bottom}px`);
-        root.setProperty("--tg-safe-area-inset-left", `${safe.left}px`);
-        root.setProperty("--tg-safe-area-inset-right", `${safe.right}px`);
-      }
-      if (content) {
-        root.setProperty("--tg-content-safe-area-inset-top", `${content.top}px`);
-        root.setProperty("--tg-content-safe-area-inset-bottom", `${content.bottom}px`);
-        root.setProperty("--tg-content-safe-area-inset-left", `${content.left}px`);
-        root.setProperty("--tg-content-safe-area-inset-right", `${content.right}px`);
-      }
+      (["top", "bottom", "left", "right"] as const).forEach((side) => {
+        root.setProperty(`--tg-safe-area-inset-${side}`, `${safe[side]}px`);
+        root.setProperty(`--tg-content-safe-area-inset-${side}`, `${content[side]}px`);
+      });
     }
-    syncSafeAreaVars();
-    tg.onEvent?.("safeAreaChanged", syncSafeAreaVars);
-    tg.onEvent?.("contentSafeAreaChanged", syncSafeAreaVars);
-    tg.onEvent?.("fullscreenChanged", syncSafeAreaVars);
+    applySafeAreaVars();
+    tg.onEvent?.("safeAreaChanged", applySafeAreaVars);
+    tg.onEvent?.("contentSafeAreaChanged", applySafeAreaVars);
+    tg.onEvent?.("fullscreenChanged", applySafeAreaVars);
 
     async function authenticate() {
       if (!hasRestoredSession) setStatus("authenticating");
@@ -94,9 +93,9 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     void authenticate();
 
     return () => {
-      tg.offEvent?.("safeAreaChanged", syncSafeAreaVars);
-      tg.offEvent?.("contentSafeAreaChanged", syncSafeAreaVars);
-      tg.offEvent?.("fullscreenChanged", syncSafeAreaVars);
+      tg.offEvent?.("safeAreaChanged", applySafeAreaVars);
+      tg.offEvent?.("contentSafeAreaChanged", applySafeAreaVars);
+      tg.offEvent?.("fullscreenChanged", applySafeAreaVars);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
