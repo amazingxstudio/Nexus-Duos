@@ -246,4 +246,33 @@ img.draggable-ok { pointer-events: auto; }
 
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  /* ---- Bottom nav active-tab indicator ----
+     A genuinely refractive glass pill (not a flat cyan-tinted chip) behind
+     the active tab — same "explicit backdrop-filter, not @apply-chained"
+     rule as the rest of the Liquid Glass system above: framer-motion
+     animates this element's position/size directly (layoutId), so it
+     can't just be `glass-panel` (a static className string) without
+     losing that shared-layout animation, hence its own small class here. */
+  .nav-pill-glass {
+    @apply overflow-hidden rounded-full border border-white/[0.16];
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px) saturate(200%);
+    -webkit-backdrop-filter: blur(20px) saturate(200%);
+  }
+  .theme-light .nav-pill-glass {
+    background: rgba(255, 255, 255, 0.4);
+    @apply border-white/60;
+  }
+  .nav-pill-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.06) 30%, rgba(255,255,255,0) 60%);
+  }
+  .theme-light .nav-pill-glass::before {
+    background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.25) 30%, rgba(255,255,255,0) 60%);
+  }
   }
