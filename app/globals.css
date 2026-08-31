@@ -28,6 +28,24 @@
      here. Light backgrounds wash color out much faster, so light theme
      below pushes this up instead of down. */
   --orb-opacity: 0.13;
+
+  /* Telegram Mini App insets.
+     --tg-content-safe-area-inset-* is the space Telegram's own floating
+     header controls (Close, collapse arrow, ⋮ menu) occupy over the
+     content in fullscreen mode. --tg-safe-area-inset-* is the device's
+     own notch/status-bar/home-indicator area. Telegram's own
+     telegram-web-app.js script writes both onto the document as these
+     CSS variables once known; TelegramProvider also mirrors them from
+     the WebApp API directly and keeps them live via the
+     safeAreaChanged/contentSafeAreaChanged/fullscreenChanged events, as
+     a fallback for clients that lag on the CSS side. Plain
+     env(safe-area-inset-*) does NOT resolve inside Telegram's in-app
+     WebView, so pages use --app-safe-* instead. The 0px fallbacks make
+     this a no-op outside Telegram. */
+  --app-safe-top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+  --app-safe-bottom: calc(var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px));
+  --app-safe-left: calc(var(--tg-safe-area-inset-left, 0px) + var(--tg-content-safe-area-inset-left, 0px));
+  --app-safe-right: calc(var(--tg-safe-area-inset-right, 0px) + var(--tg-content-safe-area-inset-right, 0px));
 }
 
 /* Light theme — toggled via the .theme-light class on <html> (see ThemeProvider) */
