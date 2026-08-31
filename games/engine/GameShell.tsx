@@ -59,45 +59,63 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
   }
 
   return (
-    <motion.div animate={shakeControls} className="flex h-full min-h-0 flex-col overflow-y-auto px-4 pb-8 pt-6">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="glass-panel h-2 flex-1 overflow-hidden rounded-full">
-          <motion.div
-            className={`h-full rounded-full ${urgent ? "bg-magenta" : "bg-gradient-to-r from-cyan to-violet"}`}
-            animate={{ width: `${pct}%` }}
-            transition={{ duration: 0.9, ease: "linear" }}
-          />
-        </div>
-        <button
-          onClick={() => setConfirmingLeave(true)}
-          aria-label="Exit match"
-          className="icon-badge h-8 w-8 shrink-0 bg-white/5 text-ink-muted"
-        >
-          <LogOut size={14} />
-        </button>
-      </div>
-
-      <div className="mb-4 flex items-center justify-between">
-        <ScorePill label="You" score={myScore} accent="cyan" />
-        <span className="font-display text-xs uppercase tracking-widest text-ink-faint">VS</span>
-        <ScorePill label="Rival" score={opponentScore} accent="magenta" />
-      </div>
-
-      <AnimatePresence>
-        {opponentDisconnected && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-ember/30 bg-ember/10 px-4 py-2 text-center text-sm text-ember"
+    <motion.div animate={shakeControls} className="relative flex h-full min-h-0 flex-col overflow-y-auto px-4 pb-8">
+      {/* Floating header: absolutely positioned instead of sitting in normal
+          flow, so it no longer eats into the height the centering region
+          below gets to work with — otherwise the header's own height
+          biases the game board toward the top of the screen instead of
+          centering on the full available height. inset-x-4/top-6
+          reproduce the horizontal/top offset the container's own padding
+          used to give this row (absolute children measure from the
+          padding box, so the container's padding no longer applies to
+          them automatically). */}
+      <div className="absolute inset-x-4 top-6 z-10 flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <div className="glass-panel h-2 flex-1 overflow-hidden rounded-full">
+            <motion.div
+              className={`h-full rounded-full ${urgent ? "bg-magenta" : "bg-gradient-to-r from-cyan to-violet"}`}
+              animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.9, ease: "linear" }}
+            />
+          </div>
+          <button
+            onClick={() => setConfirmingLeave(true)}
+            aria-label="Exit match"
+            className="icon-badge h-8 w-8 shrink-0 bg-white/5 text-ink-muted"
           >
-            <WifiOff size={14} />
-            Opponent disconnected — waiting to reconnect…
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <LogOut size={14} />
+          </button>
+        </div>
 
-      <div className="flex min-h-0 flex-1 items-center justify-center">{children}</div>
+        <div className="flex items-center justify-between">
+          <ScorePill label="You" score={myScore} accent="cyan" />
+          <span className="font-display text-xs uppercase tracking-widest text-ink-faint">VS</span>
+          <ScorePill label="Rival" score={opponentScore} accent="magenta" />
+        </div>
+      </div>
+
+      {/* paddingTop clears the floating header above (~48px progress row +
+          ~56px score row, from the container's top edge) so nothing
+          overlaps it, while height: 100% means centering below is now
+          measured against the FULL container height rather than whatever
+          was left over beneath a flow-positioned header. */}
+      <div style={{ height: "100%", paddingTop: 110 }} className="flex min-h-0 flex-1 flex-col">
+        <AnimatePresence>
+          {opponentDisconnected && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-ember/30 bg-ember/10 px-4 py-2 text-center text-sm text-ember"
+            >
+              <WifiOff size={14} />
+              Opponent disconnected — waiting to reconnect…
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="flex min-h-0 flex-1 items-center justify-center">{children}</div>
+      </div>
 
       <AnimatePresence>
         {confirmingLeave && (
