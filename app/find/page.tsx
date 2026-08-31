@@ -115,7 +115,7 @@ export default function FindPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col px-5 pb-28 pt-8">
+    <main className="flex min-h-dvh flex-col px-5 pb-28 pt-[calc(2rem+var(--app-safe-top,0px))]">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-start justify-between gap-3">
         <div>
           <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Matchmaking</p>
@@ -125,7 +125,7 @@ export default function FindPage() {
           href="/friends"
           className="icon-badge h-10 w-10 glass-panel shrink-0"
           aria-label="Friends"
-          style={{ marginTop: "max(env(safe-area-inset-top), 12px)" }}
+          style={{ marginTop: "12px" }}
         >
           <Users size={18} className="text-ink-muted" />
         </Link>
