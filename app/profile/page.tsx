@@ -50,7 +50,6 @@ export default function MyProfilePage() {
 
   return (
     <main className="min-h-dvh px-5 pb-32 pt-8">
-     style={{ paddingRight: "var(--tg-content-safe-area-inset-right, 0px)" }}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold text-ink-primary">Profile</h1>
         <Link
