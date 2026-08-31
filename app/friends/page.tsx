@@ -8,9 +8,11 @@ import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { GameInvitePickerSheet } from "@/components/room/GameInvitePickerSheet";
+import { OutgoingInviteToast } from "@/components/room/OutgoingInviteToast";
 
 interface PlayerCard {
   user_id: string; nickname: string; player_id: string; photo_url?: string | null; online: boolean;
+  last_seen_at?: string | null; last_seen_label?: string;
 }
 
 export default function FriendsPage() {
@@ -22,6 +24,7 @@ export default function FriendsPage() {
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [sentInvite, setSentInvite] = useState<string | null>(null);
   const [pickerFor, setPickerFor] = useState<PlayerCard | null>(null);
+  const [pendingInvite, setPendingInvite] = useState<{ user_id: string; nickname: string } | null>(null);
 
   function loadFriends() {
     apiFetch<{ friends: PlayerCard[] }>("/players/friends", { token }).then((res) => setFriends(res.friends));
@@ -61,6 +64,7 @@ export default function FriendsPage() {
     if (!pickerFor) return;
     socket?.emit("invite:send", { to_user_id: pickerFor.user_id, game_key: gameKey });
     setSentInvite(pickerFor.user_id);
+    setPendingInvite({ user_id: pickerFor.user_id, nickname: pickerFor.nickname });
     setPickerFor(null);
     setTimeout(() => setSentInvite(null), 3000);
   }
@@ -113,7 +117,7 @@ export default function FriendsPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-ink-primary">{f.nickname}</p>
-                <p className="text-xs text-ink-muted">{f.online ? "Online" : "Offline"}</p>
+                <p className="text-xs text-ink-muted">{f.last_seen_label ?? "Last seen recently"}</p>
               </div>
             </Link>
             {f.online && (
@@ -126,6 +130,7 @@ export default function FriendsPage() {
       </div>
 
       <GameInvitePickerSheet target={pickerFor} onClose={() => setPickerFor(null)} onPick={sendInvite} />
+      <OutgoingInviteToast target={pendingInvite} onDismiss={() => setPendingInvite(null)} />
     </main>
   );
 }
