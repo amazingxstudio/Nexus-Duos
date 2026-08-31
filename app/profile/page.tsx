@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Pencil, Check, Copy, Settings, ChevronUp, Trophy, Target, Percent, User } from "lucide-react";
@@ -50,9 +51,23 @@ export default function MyProfilePage() {
 
   return (
     <main className="min-h-dvh px-5 pb-32 pt-8">
+      <div className="mb-4 flex justify-center">
+        {/* Logo slot — see /public/logo.png. Modest size, near the top of
+            this page's own header (not the shared app header). */}
+        <div className="relative aspect-video w-20">
+          <Image src="/logo.png" alt="Nexus Duos" fill priority quality={100} className="object-contain" sizes="80px" />
+        </div>
+      </div>
+
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold text-ink-primary">Profile</h1>
-        <Link href="/settings" className="icon-badge h-10 w-10 glass-panel"><Settings size={18} className="text-ink-muted" /></Link>
+        <Link
+          href="/settings"
+          className="icon-badge h-10 w-10 glass-panel"
+          style={{ marginTop: "max(env(safe-area-inset-top), 12px)" }}
+        >
+          <Settings size={18} className="text-ink-muted" />
+        </Link>
       </div>
 
       <div className="glass-panel flex flex-col items-center p-8 text-center">
