@@ -27,11 +27,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       >
         <div className="relative flex items-center justify-center">
           <span className="absolute -inset-6 rounded-[2rem] border border-violet/40 opacity-40 animate-pulse-glow" />
-          {/* Hero logo slot — see /public/logo.png. This is the very
-              first thing every player sees, so it's rendered with
-              priority (no lazy-load blank flash) at full quality. */}
-          <div className="relative aspect-video w-44">
-            <Image src="/logo.png" alt="Nexus Duos" fill priority quality={100} className="object-contain" sizes="176px" />
+          {/* Hero logo slot — see /public/logo-mark.webp, a tight crop of
+              the wordmark (as opposed to /public/logo.png's full banner,
+              which has too much background padding to read well this
+              small). This is the very first thing every player sees, so
+              it's rendered with priority (no lazy-load blank flash) at
+              full quality. rounded-2xl + overflow-hidden gives the frame
+              itself curved corners, matching the glass-panel around it. */}
+          <div className="relative aspect-[1085/509] w-44 overflow-hidden rounded-2xl">
+            <Image src="/logo-mark.webp" alt="Nexus Duos" fill priority quality={100} className="object-cover" sizes="176px" />
           </div>
         </div>
 
@@ -48,4 +52,3 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       </motion.div>
     </div>
   );
-}
