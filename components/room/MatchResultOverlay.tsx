@@ -231,7 +231,7 @@ export function MatchResultOverlay({ myScore, opponentScore, didWin, gameKey, op
           </div>
           <button onClick={toggleFriend} disabled={friendBusy} className="flex items-center gap-1.5 text-xs text-ink-muted disabled:opacity-60">
             {friendAdded ? <Check size={12} className="text-cyan" /> : <UserPlus size={12} />}
-            <span className={friendAdded ? "text-cyan" : ""}>{friendAdded ? "Added ✓" : "Add as friend"}</span>
+            <span className={friendAdded ? "text-cyan" : ""}>{friendAdded ? "Added" : "Add as friend"}</span>
           </button>
           {rematch === "waiting" && (
             <p className="flex items-center gap-1.5 text-xs text-ink-muted">
