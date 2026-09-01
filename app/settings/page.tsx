@@ -60,7 +60,7 @@ export default function SettingsPage() {
 
   if (!settings) {
     return (
-      <main className="min-h-dvh px-5 pb-28 pt-6">
+      <main className="min-h-dvh px-5 pb-28 pt-10">
         <h1 className="mb-6 font-display text-2xl font-bold text-ink-primary">Settings</h1>
         <div className="flex flex-col gap-3">
           {[0, 1, 2].map((i) => (
@@ -78,7 +78,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <main className="min-h-dvh px-5 pb-28 pt-6">
+    <main className="min-h-dvh px-5 pb-28 pt-10">
       <h1 className="mb-6 font-display text-2xl font-bold text-ink-primary">Settings</h1>
 
       <p className="mb-3 text-xs uppercase tracking-wide text-ink-muted">Theme</p>
