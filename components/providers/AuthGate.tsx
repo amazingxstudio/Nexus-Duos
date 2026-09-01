@@ -28,13 +28,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         <div className="relative flex items-center justify-center">
           <span className="absolute -inset-6 rounded-[2rem] border border-violet/40 opacity-40 animate-pulse-glow" />
           {/* Hero logo slot — see /public/logo-mark.webp, a tight crop of
-              the wordmark (as opposed to /public/logo.png's full banner,
-              which has too much background padding to read well this
-              small). This is the very first thing every player sees, so
-              it's rendered with priority (no lazy-load blank flash) at
-              full quality. rounded-2xl + overflow-hidden gives the frame
-              itself curved corners, matching the glass-panel around it. */}
-          <div className="relative aspect-[1085/509] w-44 overflow-hidden rounded-2xl">
+              the wordmark. The box below is sized to the asset's own
+              101:48 crop ratio, so object-cover has nothing left to
+              trim — the wordmark fills the frame edge-to-edge instead
+              of floating small inside it. This is the very first thing
+              every player sees, so it's rendered with priority (no
+              lazy-load blank flash) at full quality. rounded-2xl +
+              overflow-hidden gives the frame itself curved corners,
+              matching the glass-panel around it. */}
+          <div className="relative aspect-[101/48] w-44 overflow-hidden rounded-2xl">
             <Image src="/logo-mark.webp" alt="Nexus Duos" fill priority quality={100} className="object-cover" sizes="176px" />
           </div>
         </div>
