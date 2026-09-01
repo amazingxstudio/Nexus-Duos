@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pencil, Check, Copy, Settings, ChevronUp, Trophy, Target, Percent, User } from "lucide-react";
+import { Pencil, Check, Copy, ChevronUp, Trophy, Target, Percent, User } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { apiFetch } from "@/lib/api";
 
@@ -50,49 +50,54 @@ export default function MyProfilePage() {
 
   return (
     <main className="min-h-dvh px-5 pb-32 pt-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-ink-primary">Profile</h1>
-        <Link
-          href="/settings"
-          className="icon-badge h-10 w-10 glass-panel"
-          style={{ marginTop: "max(env(safe-area-inset-top), 12px)" }}
-        >
-          <Settings size={18} className="text-ink-muted" />
-        </Link>
       </div>
 
-      <div className="glass-panel flex flex-col items-center p-8 text-center">
-        <div className="relative">
-          <span className="absolute -inset-1.5 rounded-full border border-cyan opacity-40 animate-pulse-glow" />
-          <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-cyan shadow-glow-cyan bg-surface-raised bg-cover bg-center" style={user?.photo_url ? { backgroundImage: `url(${user.photo_url})` } : undefined}>
-            {!user?.photo_url && <User size={32} strokeWidth={1.5} className="text-ink-muted" />}
+      {/* Same wordmark as the login screen (/public/logo-mark.webp), sized
+          to its own 101:48 crop so it fills this top strip edge-to-edge
+          with no letterboxing — the panel's shape follows the logo's
+          proportions rather than squeezing it down to fit. The avatar
+          overlaps the seam between banner and card, like a cover-photo
+          layout, so nothing about the card shrinks to make room for it. */}
+      <div className="glass-panel flex flex-col items-center overflow-hidden text-center">
+        <div className="relative aspect-[101/48] w-full">
+          <Image src="/logo-mark.webp" alt="Nexus Duos" fill quality={100} className="object-cover" sizes="480px" />
+        </div>
+
+        <div className="flex w-full flex-col items-center px-8 pb-8">
+          <div className="relative -mt-12">
+            <span className="absolute -inset-1.5 rounded-full border border-cyan opacity-40 animate-pulse-glow" />
+            <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-cyan shadow-glow-cyan ring-4 ring-void bg-surface-raised bg-cover bg-center" style={user?.photo_url ? { backgroundImage: `url(${user.photo_url})` } : undefined}>
+              {!user?.photo_url && <User size={32} strokeWidth={1.5} className="text-ink-muted" />}
+            </div>
           </div>
-        </div>
 
-        <div className="mt-4 flex items-center gap-2">
-          {editing ? (
-            <>
-              <input
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                autoFocus
-                maxLength={20}
-                className="selectable stat-mono w-40 border-b border-cyan/50 bg-transparent text-center text-xl font-bold text-ink-primary outline-none"
-              />
-              <button onClick={saveNickname} className="icon-badge h-8 w-8 bg-cyan text-void"><Check size={14} strokeWidth={2.5} /></button>
-            </>
-          ) : (
-            <>
-              <h2 className="font-display text-xl font-bold text-ink-primary">{user?.profile?.nickname ?? "Player"}</h2>
-              <button onClick={() => setEditing(true)} className="text-ink-faint"><Pencil size={14} /></button>
-            </>
-          )}
-        </div>
+          <div className="mt-4 flex items-center gap-2">
+            {editing ? (
+              <>
+                <input
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  autoFocus
+                  maxLength={20}
+                  className="selectable stat-mono w-40 border-b border-cyan/50 bg-transparent text-center text-xl font-bold text-ink-primary outline-none"
+                />
+                <button onClick={saveNickname} className="icon-badge h-8 w-8 bg-cyan text-void"><Check size={14} strokeWidth={2.5} /></button>
+              </>
+            ) : (
+              <>
+                <h2 className="font-display text-xl font-bold text-ink-primary">{user?.profile?.nickname ?? "Player"}</h2>
+                <button onClick={() => setEditing(true)} className="text-ink-faint"><Pencil size={14} /></button>
+              </>
+            )}
+          </div>
 
-        <button onClick={copyId} className="stat-mono mt-1 flex items-center gap-1.5 text-xs text-ink-muted">
-          {user?.profile?.player_id}
-          {copied ? <Check size={12} className="text-cyan" /> : <Copy size={12} />}
-        </button>
+          <button onClick={copyId} className="stat-mono mt-1 flex items-center gap-1.5 text-xs text-ink-muted">
+            {user?.profile?.player_id}
+            {copied ? <Check size={12} className="text-cyan" /> : <Copy size={12} />}
+          </button>
+        </div>
       </div>
 
       <section className="mt-6">
