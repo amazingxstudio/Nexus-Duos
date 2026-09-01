@@ -49,7 +49,7 @@ export default function MyProfilePage() {
   const winRate = user?.profile && user.profile.total_matches > 0 ? Math.round((user.profile.wins / user.profile.total_matches) * 100) : 0;
 
   return (
-    <main className="min-h-dvh px-5 pb-32 pt-8">
+    <main className="min-h-dvh px-5 pb-32 pt-6">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-ink-primary">Profile</h1>
       </div>
