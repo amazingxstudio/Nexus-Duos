@@ -125,10 +125,7 @@ export default function FindPage() {
           href="/friends"
           className="icon-badge h-10 w-10 glass-panel shrink-0"
           aria-label="Friends"
-          style={{
-            marginTop: "max(var(--tg-content-safe-area-inset-top, 0px), 12px)",
-            marginRight: "var(--tg-content-safe-area-inset-right, 0px)",
-          }}
+          style={{ marginTop: "max(env(safe-area-inset-top), 12px)" }}
         >
           <Users size={18} className="text-ink-muted" />
         </Link>
