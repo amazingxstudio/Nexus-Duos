@@ -41,10 +41,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <div>
-          <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Nexus Duos</p>
-          <p className="mt-2 text-sm text-ink-muted">Real-time 1v1 duels, one tap away.</p>
-        </div>
+        <p className="text-sm text-ink-muted">Where duels begin.</p>
 
         {status === "error" ? (
           error === "NOT_IN_TELEGRAM" ? (
