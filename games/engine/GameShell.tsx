@@ -40,7 +40,17 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
   function confirmLeave() {
     onLeave();
     setConfirmingLeave(false);
-    router.push("/");
+    // Deliberately no router.push("/") here — the whole point of leaving is
+    // to forfeit, and the person forfeiting needs to see that result too
+    // (or the "match cancelled" screen, if the rival was already
+    // disconnected). Navigating away immediately used to unmount this
+    // screen — and tear down the socket listeners with it — before the
+    // server's game_finished/game_cancelled broadcast could ever arrive,
+    // so the leaver never saw their own Defeat/cancelled screen even
+    // though the match ended exactly as intended. Now we just wait: the
+    // `cancelled` branch above and each game's own MatchResultOverlay
+    // (driven by `status === "finished"`) pick this up automatically,
+    // and their own "Home" button is what actually navigates away.
   }
 
   if (cancelled) {
