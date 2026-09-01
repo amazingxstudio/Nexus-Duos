@@ -70,7 +70,7 @@ export default function FriendsPage() {
   }
 
   return (
-    <main className="min-h-dvh px-5 pb-28 pt-6">
+    <main className="min-h-dvh px-5 pb-28 pt-10">
       <h1 className="mb-6 font-display text-2xl font-bold text-ink-primary">Friends</h1>
 
       <div className="glass-panel mb-6 flex items-center gap-2 px-4 py-3">
