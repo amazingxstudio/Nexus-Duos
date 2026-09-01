@@ -86,7 +86,7 @@ export default function RoomPage({ params }: { params: { code: string } }) {
   const gameMeta = room.game ? getGameMeta(room.game.key) : undefined;
 
   return (
-    <main className="flex min-h-dvh flex-col px-5 pb-28 pt-8">
+    <main className="flex min-h-dvh flex-col px-5 pb-28 pt-6">
       <header className="mb-6 text-center"><p className="stat-mono text-xs text-violet">{room.code}</p></header>
 
       {room.status !== "IN_PROGRESS" && room.status !== "FINISHED" && (
@@ -144,7 +144,7 @@ export default function RoomPage({ params }: { params: { code: string } }) {
             key="game"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="h-[calc(100dvh-13rem)] min-h-0"
+            className="h-[calc(100dvh-12.5rem)] min-h-0"
           >
             <GameDispatcher gameKey={room.game.key} matchId={room.match_id} roomCode={room.code} opponentId={opponent.id} />
           </motion.div>
