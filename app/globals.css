@@ -293,4 +293,45 @@ img.draggable-ok { pointer-events: auto; }
   .theme-light .nav-pill-glass::before {
     background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.25) 30%, rgba(255,255,255,0) 60%);
   }
+
+  /* ---- Bottom nav "liquid glass" active indicator ----
+     A second copy of the active tab's highlight lives BEHIND the nav
+     bar (see .nav-liquid-back in BottomNav.tsx) instead of clipped
+     inside it, with a small round "drip" hanging beneath it. The SVG
+     goo filter (#nav-liquid-goo, defined inline in the component)
+     melts the pill and the drip into one blobby shape before it's
+     painted — the bar itself sits on top and covers the pill portion,
+     so only the drip is visible, bulging out past the bar's own
+     bottom edge like the glass is being pushed through the seam. */
+  .nav-liquid-back {
+    z-index: 0;
+    pointer-events: none;
+    backdrop-filter: blur(18px) saturate(200%);
+    -webkit-backdrop-filter: blur(18px) saturate(200%);
+  }
+  .nav-liquid-blob {
+    position: absolute;
+    inset-inline: 0.5rem;
+    inset-block: 0.125rem;
+    border-radius: 9999px;
+    background: rgba(0, 229, 255, 0.16);
+  }
+  .theme-light .nav-liquid-blob {
+    background: rgba(0, 144, 168, 0.16);
+  }
+  .nav-liquid-drip {
+    position: absolute;
+    left: 50%;
+    bottom: -0.7rem;
+    width: 1.3rem;
+    height: 1.3rem;
+    transform: translateX(-50%);
+    border-radius: 9999px;
+    background: rgba(0, 229, 255, 0.16);
+    box-shadow: 0 10px 16px -6px rgba(0, 229, 255, 0.45);
+  }
+  .theme-light .nav-liquid-drip {
+    background: rgba(0, 144, 168, 0.16);
+    box-shadow: 0 10px 16px -6px rgba(0, 144, 168, 0.4);
+  }
   }
