@@ -116,19 +116,9 @@ export default function FindPage() {
 
   return (
     <main className="flex min-h-dvh flex-col px-5 pb-28 pt-8">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-start justify-between gap-3">
-        <div>
-          <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Matchmaking</p>
-          <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">Find your duel</h1>
-        </div>
-        <Link
-          href="/friends"
-          className="icon-badge h-10 w-10 glass-panel shrink-0"
-          aria-label="Friends"
-          style={{ marginTop: "max(env(safe-area-inset-top), 12px)" }}
-        >
-          <Users size={18} className="text-ink-muted" />
-        </Link>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Matchmaking</p>
+        <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">Find your duel</h1>
       </motion.div>
 
       <motion.button
@@ -181,20 +171,32 @@ export default function FindPage() {
         </button>
       </motion.div>
 
-      {sortedFriends.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-8">
-          <p className="mb-3 text-xs uppercase tracking-wide text-ink-muted">Friends</p>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-8">
+        {/* Friends entry point lives here now, next to the section it
+            actually belongs to, instead of floating in the page header. */}
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs uppercase tracking-wide text-ink-muted">Friends</p>
+          <Link href="/friends" className="icon-badge h-8 w-8 glass-panel" aria-label="Friends">
+            <Users size={14} className="text-ink-muted" />
+          </Link>
+        </div>
+
+        {sortedFriends.length === 0 ? (
+          <div className="glass-panel p-6 text-center text-xs text-ink-muted">No friends added yet — tap the icon above to add some.</div>
+        ) : (
           <div className="flex flex-col gap-2">
             {sortedFriends.map((f) => (
               <div key={f.user_id} className="glass-panel flex items-center gap-3 p-3">
-                <div className="relative shrink-0">
-                  <div className="h-9 w-9 overflow-hidden rounded-full bg-surface-raised bg-cover bg-center" style={f.photo_url ? { backgroundImage: `url(${f.photo_url})` } : undefined} />
-                  {f.online && <Circle size={9} className="absolute -bottom-0.5 -right-0.5 fill-cyan text-cyan" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink-primary">{f.nickname}</p>
-                  {!f.online && <p className="truncate text-xs text-ink-muted">{f.last_seen_label ?? "Last seen recently"}</p>}
-                </div>
+                <Link href={`/profile/${f.player_id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="relative shrink-0">
+                    <div className="h-9 w-9 overflow-hidden rounded-full bg-surface-raised bg-cover bg-center" style={f.photo_url ? { backgroundImage: `url(${f.photo_url})` } : undefined} />
+                    {f.online && <Circle size={9} className="absolute -bottom-0.5 -right-0.5 fill-cyan text-cyan" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink-primary">{f.nickname}</p>
+                    {!f.online && <p className="truncate text-xs text-ink-muted">{f.last_seen_label ?? "Last seen recently"}</p>}
+                  </div>
+                </Link>
                 {f.online && (
                   <button onClick={() => setPickerFor(f)} disabled={sentInvite === f.user_id} className="icon-badge h-9 w-9 shrink-0 bg-cyan text-void disabled:opacity-50">
                     <Swords size={15} />
@@ -203,8 +205,8 @@ export default function FindPage() {
               </div>
             ))}
           </div>
-        </motion.div>
-      )}
+        )}
+      </motion.div>
 
       {error && (
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 text-center text-sm text-magenta">
