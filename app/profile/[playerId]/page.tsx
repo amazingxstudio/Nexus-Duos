@@ -64,7 +64,7 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center px-6 pb-28 pt-12">
+    <main className="flex min-h-dvh flex-col items-center px-6 pb-28 pt-10">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative">
         <span className="absolute -inset-1.5 rounded-full border border-magenta opacity-40 animate-pulse-glow" />
         <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-magenta shadow-glow-magenta bg-surface-raised bg-cover bg-center" style={profile.photo_url ? { backgroundImage: `url(${profile.photo_url})` } : undefined}>
