@@ -115,7 +115,7 @@ export default function FindPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col px-5 pb-28 pt-6">
+    <main className="flex min-h-dvh flex-col px-5 pb-28 pt-10">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <p className="font-display text-xs uppercase tracking-[0.35em] text-violet">Matchmaking</p>
         <h1 className="mt-1 font-display text-2xl font-bold text-ink-primary">Find your duel</h1>
