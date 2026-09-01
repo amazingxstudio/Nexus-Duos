@@ -60,7 +60,7 @@ export default function SettingsPage() {
 
   if (!settings) {
     return (
-      <main className="min-h-dvh px-5 pb-28 pt-8">
+      <main className="min-h-dvh px-5 pb-28 pt-6">
         <h1 className="mb-6 font-display text-2xl font-bold text-ink-primary">Settings</h1>
         <div className="flex flex-col gap-3">
           {[0, 1, 2].map((i) => (
@@ -78,7 +78,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <main className="min-h-dvh px-5 pb-28 pt-8">
+    <main className="min-h-dvh px-5 pb-28 pt-6">
       <h1 className="mb-6 font-display text-2xl font-bold text-ink-primary">Settings</h1>
 
       <p className="mb-3 text-xs uppercase tracking-wide text-ink-muted">Theme</p>
@@ -111,7 +111,7 @@ export default function SettingsPage() {
         <ToggleRow
           icon={EyeOff}
           label="Show exact last seen"
-          description="Off shows friends \u201cLast seen recently\u201d instead of an exact time"
+          description="Off shows friends “Last seen recently” instead of an exact time"
           checked={settings.show_exact_last_seen}
           onChange={(v) => update({ show_exact_last_seen: v })}
           disabled={!settings.show_online_status}
