@@ -3,15 +3,18 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { User, Trophy, Percent, Target, Lock, Bot, EyeOff, UserPlus, Check, Copy } from "lucide-react";
+import { User, Trophy, Percent, Target, Lock, Bot, EyeOff, UserPlus, Check, Copy, Users } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getGameMeta } from "@/lib/games";
+
+interface VisitorCard { nickname: string; player_id: string; photo_url?: string | null; }
 
 interface PublicProfile {
   nickname: string; player_id: string; photo_url?: string | null;
   total_matches: number; wins: number; losses: number; draws: number;
   win_rate: number; total_score: number; history_visible: boolean; is_friend: boolean;
+  recent_visitors: VisitorCard[];
 }
 
 interface MatchEntry {
@@ -31,6 +34,14 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    // Resetting these on every playerId change matters here specifically:
+    // clicking from one visitor card into another visitor's profile (spec
+    // D.13's recursive browsing) navigates within the SAME route/component
+    // instance, so without a reset the outgoing player's stats/visitors
+    // would flash on screen for a moment under the new player's name.
+    setProfile(null);
+    setMatches(null);
+    setLoadError(false);
     apiFetch<PublicProfile>(`/profile/${playerId}`, { token })
       .then((res) => { setProfile(res); setAdded(res.is_friend); })
       .catch(() => setLoadError(true));
@@ -98,6 +109,26 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
         <p className="text-magenta">{profile.losses} Losses</p>
         <p className="text-ink-muted">{profile.draws} Draws</p>
       </div>
+
+      {profile.recent_visitors.length > 0 && (
+        <div className="mt-8 w-full max-w-sm">
+          <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm uppercase tracking-widest text-ink-muted">
+            <Users size={13} />Profile Visitors
+          </h2>
+          {/* Each card links back into this exact same page component with
+              a different playerId — clicking through visitor → visitor's
+              visitor → ... works for free, no dedicated recursive component
+              needed (spec D.13). */}
+          <div className="flex gap-3">
+            {profile.recent_visitors.map((v) => (
+              <Link key={v.player_id} href={`/profile/${v.player_id}`} className="glass-card flex flex-1 flex-col items-center gap-1.5 border border-white/[0.08] p-3">
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-surface-raised bg-cover bg-center" style={v.photo_url ? { backgroundImage: `url(${v.photo_url})` } : undefined} />
+                <p className="w-full truncate text-center text-xs text-ink-muted">{v.nickname}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-10 w-full max-w-sm">
         <h2 className="mb-3 font-display text-sm uppercase tracking-widest text-ink-muted">Recent Matches</h2>
