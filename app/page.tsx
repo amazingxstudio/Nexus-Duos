@@ -4,14 +4,23 @@ import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Swords, Bot, ChevronLeft, ChevronRight, Loader2, LayoutGrid, LayoutList } from "lucide-react";
+import { Swords, Bot, ChevronLeft, ChevronRight, Loader2, LayoutGrid, LayoutList, Trophy, Medal } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { GAMES, ACCENT_CLASSES, type GameMeta } from "@/lib/games";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, friendlyErrorMessage } from "@/lib/api";
+import { PracticeSetupSheet, type AIDifficulty } from "@/components/room/PracticeSetupSheet";
 
 type GamesLayout = "scroll" | "grid";
 const GAMES_LAYOUT_KEY = "nexus_games_layout";
+
+// Same shape and same sessionStorage cache key /leaderboard already uses
+// (see app/leaderboard/page.tsx) — this preview and the full page end up
+// sharing one cached copy instead of each keeping a separate one, so
+// whichever loads first "warms" the other.
+interface LeaderboardEntry { nickname: string; player_id: string; total_score: number; wins: number }
+const LEADERBOARD_CACHE_KEY = "nexus_leaderboard_cache";
+const LEADERBOARD_PREVIEW_COUNT = 3;
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } };
@@ -27,11 +36,23 @@ export default function HomePage() {
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [startingGame, setStartingGame] = useState<string | null>(null);
   const [gameError, setGameError] = useState<string | null>(null);
+  const [practiceSheetOpen, setPracticeSheetOpen] = useState(false);
+  const [startingPractice, setStartingPractice] = useState(false);
+  const [practiceError, setPracticeError] = useState<string | null>(null);
   // Which of the two game-list layouts is showing. Starts as "scroll" (the
   // original default, and what the server would've rendered) and is only
   // ever switched to a saved "grid" choice after mount, in an effect —
   // reading localStorage during render would mismatch what SSR produced.
   const [gamesLayout, setGamesLayout] = useState<GamesLayout>("scroll");
+  // Top-of-leaderboard preview. There was previously no route to
+  // /leaderboard anywhere in the app's main navigation (it's not one of
+  // BottomNav's five tabs), so short of typing the URL directly there was
+  // no way to reach it at all — this compact preview plus a "View all"
+  // link is what actually makes the page discoverable, additively (the
+  // rest of the page — including the Practice vs AI button above — is
+  // untouched).
+  const [topPlayers, setTopPlayers] = useState<LeaderboardEntry[] | null>(null);
+  const [leaderboardError, setLeaderboardError] = useState(false);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(GAMES_LAYOUT_KEY);
@@ -56,6 +77,22 @@ export default function HomePage() {
     return () => window.removeEventListener("resize", updateScrollHints);
   }, []);
 
+  useEffect(() => {
+    if (!token) return;
+    const cached = sessionStorage.getItem(LEADERBOARD_CACHE_KEY);
+    if (cached) {
+      try { setTopPlayers((JSON.parse(cached) as LeaderboardEntry[]).slice(0, LEADERBOARD_PREVIEW_COUNT)); } catch {}
+    }
+    apiFetch<{ players: LeaderboardEntry[] }>("/profile/leaderboard", { token })
+      .then((res) => {
+        setTopPlayers(res.players.slice(0, LEADERBOARD_PREVIEW_COUNT));
+        sessionStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify(res.players));
+      })
+      .catch(() => {
+        if (!cached) setLeaderboardError(true);
+      });
+  }, [token]);
+
   function scrollBy(dx: number) {
     scrollerRef.current?.scrollBy({ left: dx, behavior: "smooth" });
   }
@@ -74,8 +111,30 @@ export default function HomePage() {
       // error here previously left the button looking like it just did
       // nothing, which made a backend-connectivity problem look like a
       // frontend bug.
-      setGameError(err instanceof Error ? err.message : "Couldn't create the room");
+      // frontend bug. Known codes (e.g. SERVER_FULL — spec C.10) get their
+      // own complete, translated message with no added suffix; anything
+      // else falls back to the generic connectivity hint.
+      const raw = err instanceof Error ? err.message : "Couldn't create the room";
+      const friendly = friendlyErrorMessage(raw);
+      setGameError(friendly === raw ? `${raw} — check your connection and try again.` : friendly);
       setStartingGame(null);
+    }
+  }
+
+  async function startPractice(gameKey: string, difficulty: AIDifficulty) {
+    if (startingPractice) return;
+    setStartingPractice(true);
+    setPracticeError(null);
+    try {
+      const res = await apiFetch<{ room: { code: string } }>("/rooms/practice", {
+        method: "POST", token, body: JSON.stringify({ game_key: gameKey, difficulty }),
+      });
+      router.push(`/room/${res.room.code}`);
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : "Couldn't start practice";
+      const friendly = friendlyErrorMessage(raw);
+      setPracticeError(friendly === raw ? `${raw} — check your connection and try again.` : friendly);
+      setStartingPractice(false);
     }
   }
 
@@ -121,8 +180,20 @@ export default function HomePage() {
 
       <motion.div variants={item} className="mt-6 flex flex-col gap-3">
         <Link href="/find" className="btn-primary"><Swords size={18} strokeWidth={2.25} />Find a Duel</Link>
-        <button className="btn-ghost" disabled><Bot size={18} strokeWidth={2.25} />Practice vs AI — coming soon</button>
+        <button onClick={() => setPracticeSheetOpen(true)} className="btn-ghost"><Bot size={18} strokeWidth={2.25} />Practice vs AI</button>
+        {practiceError && (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center text-xs text-magenta">
+            {practiceError}
+          </motion.p>
+        )}
       </motion.div>
+
+      <PracticeSetupSheet
+        open={practiceSheetOpen}
+        onClose={() => setPracticeSheetOpen(false)}
+        onStart={startPractice}
+        starting={startingPractice}
+      />
 
       <motion.section variants={item} className="mt-10">
         <div className="mb-3 flex items-center justify-between">
@@ -172,10 +243,50 @@ export default function HomePage() {
         )}
         {gameError && (
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 text-center text-xs text-magenta">
-            {gameError} — check your connection and try again.
+            {gameError}
           </motion.p>
         )}
       </motion.section>
+
+      {/* Compact leaderboard preview — top 3 only, with a link through to
+          the full /leaderboard page for everyone else. Silently renders
+          nothing if the fetch fails or comes back empty rather than
+          showing an error card on the home screen for what's a secondary,
+          below-the-fold feature; the full leaderboard page still has its
+          own proper error/retry state for anyone who taps through. */}
+      {!leaderboardError && (topPlayers === null || topPlayers.length > 0) && (
+        <motion.section variants={item} className="mt-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-sm uppercase tracking-widest text-ink-muted">Leaderboard</h2>
+            <Link href="/leaderboard" className="flex items-center gap-0.5 text-xs font-medium text-cyan">
+              View all<ChevronRight size={14} />
+            </Link>
+          </div>
+
+          {topPlayers === null ? (
+            <div className="flex flex-col gap-2">
+              {[0, 1, 2].map((i) => <div key={i} className="glass-panel h-14 animate-pulse-glow p-4" />)}
+            </div>
+          ) : (
+            <Link href="/leaderboard" className="glass-panel flex flex-col divide-y divide-white/[0.06] overflow-hidden">
+              {topPlayers.map((p, i) => {
+                const rank = i + 1;
+                const RankIcon = rank === 1 ? Trophy : Medal;
+                const rankColor = rank === 1 ? "text-cyan" : rank === 2 ? "text-ink-primary" : "text-ember";
+                return (
+                  <div key={p.player_id} className="flex items-center gap-3 p-3">
+                    <span className={`icon-badge h-8 w-8 shrink-0 bg-white/5 ${rankColor}`}>
+                      <RankIcon size={14} />
+                    </span>
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink-primary">{p.nickname}</p>
+                    <p className="stat-mono text-sm font-semibold text-ink-primary">{p.total_score}</p>
+                  </div>
+                );
+              })}
+            </Link>
+          )}
+        </motion.section>
+      )}
     </motion.main>
   );
 }
