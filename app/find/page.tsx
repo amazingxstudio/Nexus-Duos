@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Swords, Hash, ArrowRight, Loader2, Users, ClipboardPaste, X, Circle } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, friendlyErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { GameInvitePickerSheet } from "@/components/room/GameInvitePickerSheet";
@@ -57,7 +57,7 @@ export default function FindPage() {
       const res = await apiFetch<RoomResponse>("/rooms", { method: "POST", token });
       router.push(`/room/${res.room.code}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create room");
+      setError(err instanceof Error ? friendlyErrorMessage(err.message) : "Failed to create room");
       setLoading(null);
     }
   }
