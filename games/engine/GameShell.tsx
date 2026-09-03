@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
-import { WifiOff, LogOut, X, Ban } from "lucide-react";
+import { WifiOff, LogOut, X, Ban, User } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useActiveRoomStore } from "@/store/useActiveRoomStore";
 
 interface GameShellProps {
   remainingMs: number | null;
@@ -30,6 +32,41 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
   const shakeControls = useAnimation();
   const pct = remainingMs !== null ? Math.max(0, Math.min(100, (remainingMs / totalMs) * 100)) : 100;
   const urgent = pct < 20;
+
+  // Whose face goes next to which score — my own photo comes straight off
+  // the auth store, the rival's comes off whichever side of the active
+  // room *isn't* me. Reading this here (rather than threading a
+  // photoUrl prop through all 8 *Game.tsx callers) means every game gets
+  // the avatar for free the moment GameShell is upgraded, with zero
+  // changes needed anywhere else.
+  const myUserId = useAuthStore((s) => s.user?.id);
+  const myPhotoUrl = useAuthStore((s) => s.user?.photo_url);
+  const room = useActiveRoomStore((s) => s.room);
+  const opponentPhotoUrl = room ? (room.player1.id === myUserId ? room.player2?.photo_url : room.player1.photo_url) : null;
+
+  // The floating header (progress bar + exit button + score row) is
+  // measured for its real rendered height instead of assuming a fixed
+  // number, and the centering region below reserves exactly that much
+  // space. This used to be a hardcoded `paddingTop: 110` (a guess at
+  // "~48px progress row + ~56px score row"), which was already a little
+  // fragile, and would have gone *stale* the moment the score pills grew a
+  // profile photo (taller row) or gained extra top clearance for
+  // Telegram's fullscreen inset (see --app-safe-top below) — a hardcoded
+  // number can't track either change, so the game board would drift off
+  // true-center in exactly the games that happen to re-render this shell.
+  // A ResizeObserver keeps it correct automatically, for every game, no
+  // matter how the header's contents change in the future. Same pattern
+  // WordChainGame already uses for measuring its own on-screen keyboard.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(110);
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => setHeaderHeight(entry.contentRect.height));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!nudgeSignal) return;
@@ -69,17 +106,31 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
   }
 
   return (
-    <motion.div animate={shakeControls} className="relative flex h-full min-h-0 flex-col overflow-y-auto px-4 pb-8">
+    <motion.div
+      animate={shakeControls}
+      className="relative flex h-full min-h-0 flex-col overflow-y-auto px-4"
+      // Extra breathing room at the literal bottom edge of the screen, on
+      // top of the base 2rem — Telegram's fullscreen mode can show its own
+      // floating overlay controls close to the screen edges, and
+      // --app-safe-bottom (0px outside Telegram) is what the rest of this
+      // app already uses to stay clear of them without hardcoding a
+      // device-specific guess (see BottomNav and app/globals.css).
+      style={{ paddingBottom: "calc(2rem + var(--app-safe-bottom, 0px))" }}
+    >
       {/* Floating header: absolutely positioned instead of sitting in normal
           flow, so it no longer eats into the height the centering region
           below gets to work with — otherwise the header's own height
           biases the game board toward the top of the screen instead of
-          centering on the full available height. inset-x-4/top-6
-          reproduce the horizontal/top offset the container's own padding
-          used to give this row (absolute children measure from the
-          padding box, so the container's padding no longer applies to
-          them automatically). */}
-      <div className="absolute inset-x-4 top-6 z-10 flex flex-col gap-4">
+          centering on the full available height. inset-x-4 reproduces the
+          horizontal offset the container's own padding used to give this
+          row (absolute children measure from the padding box, so the
+          container's padding no longer applies to them automatically).
+          The top offset adds --app-safe-top on top of the base 1.5rem so
+          the exit button/progress bar/score row clear Telegram's own
+          fullscreen-mode overlay controls (back/collapse/⋮), which float
+          near the top of the screen — this used to be a flat `top-6`
+          that ignored that inset entirely. */}
+      <div ref={headerRef} className="absolute inset-x-4 z-10 flex flex-col gap-4" style={{ top: "calc(1.5rem + var(--app-safe-top, 0px))" }}>
         <div className="flex items-center gap-3">
           <div className="glass-panel h-2 flex-1 overflow-hidden rounded-full">
             <motion.div
@@ -98,18 +149,22 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
         </div>
 
         <div className="flex items-center justify-between">
-          <ScorePill label="You" score={myScore} accent="cyan" />
+          <ScorePill label="You" score={myScore} accent="cyan" photoUrl={myPhotoUrl} />
           <span className="font-display text-xs uppercase tracking-widest text-ink-faint">VS</span>
-          <ScorePill label="Rival" score={opponentScore} accent="magenta" />
+          <ScorePill label="Rival" score={opponentScore} accent="magenta" photoUrl={opponentPhotoUrl} />
         </div>
       </div>
 
-      {/* paddingTop clears the floating header above (~48px progress row +
-          ~56px score row, from the container's top edge) so nothing
-          overlaps it, while height: 100% means centering below is now
-          measured against the FULL container height rather than whatever
-          was left over beneath a flow-positioned header. */}
-      <div style={{ height: "100%", paddingTop: 110 }} className="flex min-h-0 flex-1 flex-col">
+      {/* paddingTop clears the floating header above — measured live via
+          headerHeight (see the ResizeObserver above) rather than assumed,
+          plus a small gap so the board never sits flush against it. height:
+          100% means centering below is measured against the FULL container
+          height rather than whatever was left over beneath a
+          flow-positioned header, and doing this the same way in every game
+          (nothing here is per-game) is what keeps the board landing in a
+          consistent spot across every layout that renders through this
+          shell. */}
+      <div style={{ height: "100%", paddingTop: headerHeight + 16 }} className="flex min-h-0 flex-1 flex-col">
         <AnimatePresence>
           {opponentDisconnected && (
             <motion.div
@@ -166,15 +221,21 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
   );
 }
 
-function ScorePill({ label, score, accent }: { label: string; score: number; accent: "cyan" | "magenta" }) {
+function ScorePill({ label, score, accent, photoUrl }: { label: string; score: number; accent: "cyan" | "magenta"; photoUrl?: string | null }) {
   return (
     <motion.div
       key={score}
       initial={{ scale: 1.08 }}
       animate={{ scale: 1 }}
       transition={{ duration: 0.2 }}
-      className={`glass-panel flex items-center gap-2 rounded-full px-4 py-2 ${accent === "cyan" ? "border-cyan/30" : "border-magenta/30"}`}
+      className={`glass-panel flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 ${accent === "cyan" ? "border-cyan/30" : "border-magenta/30"}`}
     >
+      <span
+        className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-surface-raised bg-cover bg-center"
+        style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}
+      >
+        {!photoUrl && <User size={13} strokeWidth={1.75} className="text-ink-muted" />}
+      </span>
       <span className="text-[11px] uppercase tracking-wide text-ink-muted">{label}</span>
       <span className={`stat-mono text-lg font-semibold ${accent === "cyan" ? "text-cyan" : "text-magenta"}`}>{score}</span>
     </motion.div>
