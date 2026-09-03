@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Swords, X, Check, RefreshCw } from "lucide-react";
 import { useSocket } from "./SocketProvider";
+import { playNotificationSound } from "@/lib/sound";
 
 interface Invite {
   from_user_id: string;
@@ -23,20 +24,40 @@ export function InviteListener() {
   useEffect(() => {
     if (!socket) return;
 
-    function onReceived(data: Invite) { setInvite(data); }
+    // Any socket push that lands on this player without them having asked
+    // for it right this second — a duel/rematch invite today, a friend
+    // request if that ever grows a real accept/decline flow later — should
+    // make a sound, since the person may not be looking at the screen when
+    // it arrives. Kept as one local helper (rather than inlined per-event)
+    // so a future second notification-style event just calls this too.
+    function notify() {
+      playNotificationSound();
+    }
+
+    function onReceived(data: Invite) {
+      notify();
+      setInvite(data);
+    }
     function onAccepted(data: { room_code: string }) {
       setInvite(null);
       router.push(`/room/${data.room_code}`);
     }
     function onDeclined() { setInvite(null); }
+    // Friends-list direct messages (spec D.14) are their own thing with
+    // their own panel (components/friends/MessagePanel.tsx) — no popup
+    // card here, just the same "something arrived" sound so it's audible
+    // even while the Friends list/message panel isn't open.
+    function onDmReceived() { notify(); }
 
     socket.on("invite:received", onReceived);
     socket.on("invite:accepted", onAccepted);
     socket.on("invite:declined", onDeclined);
+    socket.on("dm:received", onDmReceived);
     return () => {
       socket.off("invite:received", onReceived);
       socket.off("invite:accepted", onAccepted);
       socket.off("invite:declined", onDeclined);
+      socket.off("dm:received", onDmReceived);
     };
   }, [socket, router]);
 

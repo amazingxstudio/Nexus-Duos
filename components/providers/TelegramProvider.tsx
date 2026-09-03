@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore, AuthedUser } from "@/store/useAuthStore";
+import { useThemeStore } from "@/store/useThemeStore";
 
 declare global {
   interface Window {
@@ -36,18 +37,40 @@ declare global {
       contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number };
       safeAreaInset?: { top: number; bottom: number; left: number; right: number };
       /** Bot API 6.1+. Standard event bus — used here to re-read the insets
-       * above whenever they change (entering/exiting fullscreen, rotation). */
+       * above whenever they change (entering/exiting fullscreen, rotation),
+       * and to pick up live theme/back-button changes. */
       onEvent?: (eventType: string, callback: () => void) => void;
       offEvent?: (eventType: string, callback: () => void) => void;
+      BackButton?: {
+        show: () => void;
+        hide: () => void;
+        onClick: (cb: () => void) => void;
+        offClick: (cb: () => void) => void;
+        isVisible: boolean;
+      };
     }; };
   }
 }
 interface AuthResponse { token: string; user: AuthedUser; }
 
+// Retry/backoff for the initial sign-in request (spec A.2) — a cold-start
+// Render instance or a flaky connection (common enough on the VPN
+// workaround most Myanmar users are on) can fail the very first attempt
+// even though a second one a moment later would succeed. Rather than
+// surface the old "login failed" error state on the first hiccup, this
+// retries a few times with increasing delay before giving up and handing
+// control to AuthGate's existing (network/cold-start) error copy.
+const AUTH_RETRY_DELAYS_MS = [1000, 2000, 4000];
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const setSession = useAuthStore((s) => s.setSession);
   const setStatus = useAuthStore((s) => s.setStatus);
   const hasRestoredSession = useAuthStore((s) => Boolean(s.token && s.user));
+  const setTelegramColorScheme = useThemeStore((s) => s.setTelegramColorScheme);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -81,13 +104,35 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     tg.onEvent?.("contentSafeAreaChanged", applySafeAreaVars);
     tg.onEvent?.("fullscreenChanged", applySafeAreaVars);
 
+    // Theme auto-sync (spec A.5) — mirrors Telegram's own light/dark
+    // colorScheme into the theme store. Read once immediately, then kept
+    // live via themeChanged; ThemeProvider.tsx decides whether to actually
+    // USE this value (only when telegramSyncEnabled is on — see the
+    // Settings page toggle), but it costs nothing to keep it current
+    // regardless of whether sync is currently on, so flipping the toggle
+    // on doesn't need to wait for the next themeChanged event to catch up.
+    function applyTelegramColorScheme() {
+      setTelegramColorScheme(tg!.colorScheme === "light" ? "light" : "dark");
+    }
+    applyTelegramColorScheme();
+    tg.onEvent?.("themeChanged", applyTelegramColorScheme);
+
     async function authenticate() {
       if (!hasRestoredSession) setStatus("authenticating");
-      try {
-        const res = await apiFetch<AuthResponse>("/auth/telegram", { method: "POST", body: JSON.stringify({ init_data: tg!.initData }) });
-        setSession(res.token, res.user);
-      } catch (err) {
-        if (!hasRestoredSession) setStatus("error", err instanceof Error ? err.message : "AUTH_FAILED");
+
+      for (let attempt = 0; attempt <= AUTH_RETRY_DELAYS_MS.length; attempt++) {
+        try {
+          const res = await apiFetch<AuthResponse>("/auth/telegram", { method: "POST", body: JSON.stringify({ init_data: tg!.initData }) });
+          setSession(res.token, res.user);
+          return;
+        } catch (err) {
+          const isLastAttempt = attempt === AUTH_RETRY_DELAYS_MS.length;
+          if (isLastAttempt) {
+            if (!hasRestoredSession) setStatus("error", err instanceof Error ? err.message : "AUTH_FAILED");
+            return;
+          }
+          await delay(AUTH_RETRY_DELAYS_MS[attempt]);
+        }
       }
     }
     void authenticate();
@@ -96,6 +141,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       tg.offEvent?.("safeAreaChanged", applySafeAreaVars);
       tg.offEvent?.("contentSafeAreaChanged", applySafeAreaVars);
       tg.offEvent?.("fullscreenChanged", applySafeAreaVars);
+      tg.offEvent?.("themeChanged", applyTelegramColorScheme);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

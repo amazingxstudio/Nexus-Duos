@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useSocket } from "./SocketProvider";
 import { useActiveRoomStore, ActiveRoomData } from "@/store/useActiveRoomStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { apiFetch } from "@/lib/api";
 
 /**
  * Mounted once at the app root (see AppProviders) and never unmounts as the
@@ -56,6 +57,11 @@ export function RoomSync() {
     function onGameFinished(data: { match_id: string }) {
       if (data.match_id !== room?.match_id) return;
       patchRoom({ status: "FINISHED" });
+      // Own wins/losses/total_matches just changed server-side — refresh
+      // them into the auth store right away instead of waiting for the
+      // player to land on the Profile page (which also fetches fresh on
+      // its own mount as a second line of defense — see app/profile/page.tsx).
+      void refreshMyProfileStats();
     }
     function onGameCancelled(data: { match_id: string }) {
       if (data.match_id !== room?.match_id) return;
@@ -90,4 +96,15 @@ export function RoomSync() {
   }, [socket, ready, opponentReady, room]);
 
   return null;
+}
+
+async function refreshMyProfileStats() {
+  const { token, user, setSession } = useAuthStore.getState();
+  if (!token || !user) return;
+  try {
+    const res = await apiFetch<{ profile: typeof user.profile }>("/profile/me", { token });
+    setSession(token, { ...user, profile: res.profile });
+  } catch {
+    // Non-critical — the profile page's own mount-fetch is the fallback.
+  }
 }
