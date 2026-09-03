@@ -50,6 +50,31 @@ function tone(freq: number, startOffset: number, duration: number, type: Oscilla
   osc.stop(t0 + duration + 0.03);
 }
 
+/** Same as tone(), but glides linearly from one frequency to another over
+ * the note's duration instead of holding a single pitch — used for the win
+ * sound's long, hopeful tail below, since a held single tone stretched out
+ * to 2-3s just sounds like a stuck note rather than "shimmering". */
+function toneSweep(freqFrom: number, freqTo: number, startOffset: number, duration: number, type: OscillatorType, peakGain: number) {
+  const ctx = getCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+
+  const t0 = ctx.currentTime + startOffset;
+  osc.frequency.setValueAtTime(freqFrom, t0);
+  osc.frequency.exponentialRampToValueAtTime(freqTo, t0 + duration);
+
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(peakGain, t0 + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.03);
+}
+
 /** A short burst of white noise with its decay baked straight into the
  * buffer — used for the confetti "pop" below, since a pure oscillator
  * tone() can't produce a percussive/noisy texture on its own. */
@@ -80,29 +105,45 @@ function noiseBurst(startOffset: number, duration: number, peakGain: number) {
  * button, which happens before every match). Browsers only let an
  * AudioContext actually produce audible sound if it's created/resumed as
  * a direct result of a real user gesture — every sound call in this file
- * fires later, from a socket event (match end), which is never a gesture,
- * so without this the context can end up silently stuck "suspended"
- * forever and none of the sounds below ever actually play. */
+ * fires later, from a socket event (match end, an incoming invite), which
+ * is never a gesture, so without this the context can end up silently
+ * stuck "suspended" forever and none of the sounds below ever actually
+ * play. */
 export function unlockAudio() {
   getCtx();
 }
 
-/** Bright ascending arpeggio. */
+/** Bright ascending arpeggio, into a held shimmering sweep — roughly 2.2s
+ * total. The original version was a quick four-note flourish (~0.6s) that
+ * read as a UI "ding" rather than something worth celebrating; the extra
+ * layered sweep tail (two detuned voices gliding gently upward, well under
+ * the main arpeggio in volume) gives the win screen a couple of seconds of
+ * actual "shimmer" to sit under the confetti/fireworks instead of going
+ * silent while the visual celebration is still playing out. */
 export function playWinSound() {
   if (!soundEnabled()) return;
-  [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => tone(freq, i * 0.09, 0.35, "triangle", 0.16));
+  [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => tone(freq, i * 0.1, 0.4, "triangle", 0.17));
+  toneSweep(1046.5, 1568, 0.42, 1.85, "sine", 0.07);
+  toneSweep(1318.5, 1975.5, 0.5, 1.7, "sine", 0.045);
 }
 
-/** Descending, softer tone. */
+/** Descending phrase into a slow, sinking sweep — roughly 2.3s total.
+ * Sad without being harsh: sawtooth was too buzzy held for this long, so
+ * the held tail switches to a softer sine gliding gently downward. */
 export function playLoseSound() {
   if (!soundEnabled()) return;
-  [392, 329.63, 261.63].forEach((freq, i) => tone(freq, i * 0.14, 0.4, "sawtooth", 0.1));
+  [392, 329.63, 261.63].forEach((freq, i) => tone(freq, i * 0.16, 0.42, "sawtooth", 0.11));
+  toneSweep(246.94, 164.81, 0.5, 1.8, "sine", 0.075);
 }
 
-/** Neutral double chime. */
+/** Neutral double chime, held open with a flat, unresolved drone — roughly
+ * 2.1s. Deliberately doesn't rise or fall (mirrors the "draw" outcome
+ * itself: nobody won), just a soft sustained pair of tones a fifth apart. */
 export function playDrawSound() {
   if (!soundEnabled()) return;
-  [440, 440].forEach((freq, i) => tone(freq, i * 0.18, 0.28, "sine", 0.13));
+  [440, 440].forEach((freq, i) => tone(freq, i * 0.18, 0.3, "sine", 0.14));
+  tone(440, 0.4, 1.7, "sine", 0.055);
+  tone(659.25, 0.4, 1.7, "sine", 0.04);
 }
 
 /** Short, quiet tick — used for lightweight in-game feedback (e.g. a correct answer). */
@@ -112,9 +153,31 @@ export function playTickSound() {
 }
 
 /** Confetti "pop" — a quick noise burst plus a high-pitched click layered
- * on top, timed to fire right as the win-screen confetti particles burst. */
+ * on top, timed to fire right as the win-screen confetti/fireworks burst. */
 export function playConfettiPopSound() {
   if (!soundEnabled()) return;
   noiseBurst(0, 0.12, 0.18);
   tone(1800, 0, 0.08, "sine", 0.09);
+}
+
+/** A second, slightly offset firework "boom" — layered in a beat after the
+ * first pop so a multi-burst fireworks display (see MatchResultOverlay's
+ * Fireworks component) reads as several distinct explosions rather than
+ * one pop repeated identically. Lower and rounder than playConfettiPopSound
+ * so the two don't just sound like duplicates of each other. */
+export function playFireworkBoomSound() {
+  if (!soundEnabled()) return;
+  noiseBurst(0, 0.16, 0.14);
+  tone(700, 0, 0.14, "sine", 0.07);
+}
+
+/** Two quick, bright notes — used for incoming socket notifications the
+ * player should notice even if they're not looking at the screen (a duel
+ * invite, a rematch request, a friend request). Deliberately distinct from
+ * the match-result sounds above: short (under half a second) and neutral
+ * in tone, since it fires for a "heads up" event rather than a win/loss. */
+export function playNotificationSound() {
+  if (!soundEnabled()) return;
+  tone(880, 0, 0.11, "sine", 0.12);
+  tone(1318.5, 0.09, 0.16, "sine", 0.1);
 }

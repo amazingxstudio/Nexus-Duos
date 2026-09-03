@@ -22,3 +22,14 @@ export async function apiFetch<T>(
 
   return res.json() as Promise<T>;
 }
+
+// Maps a handful of known backend error codes (see app/capacity.py etc.)
+// to copy a player should actually see, instead of the raw code. Anything
+// not in this map is returned unchanged.
+const FRIENDLY_ERRORS: Record<string, string> = {
+  SERVER_FULL: "Server ပြည့်နေပါသည်၊ ခဏစောင့်ပြီးမှ ထပ်ကြိုးစားပါ",
+};
+
+export function friendlyErrorMessage(raw: string): string {
+  return FRIENDLY_ERRORS[raw] ?? raw;
+}
