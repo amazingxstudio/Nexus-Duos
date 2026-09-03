@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Zap } from "lucide-react";
 import { useGameMatch } from "@/games/engine/useGameMatch";
 import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
@@ -9,6 +11,10 @@ import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
 import { hapticTap } from "@/lib/haptics";
 
 const DURATION_MS = 90 * 1000;
+// How long the "Rival typed it first" banner holds the finished sentence
+// on screen before the next one actually replaces it — mirrors the same
+// pause in GuessTheWordGame, so the two race-style games feel consistent.
+const OPPONENT_FIRST_BANNER_MS = 1100;
 
 export function TypingRaceGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
@@ -19,29 +25,79 @@ export function TypingRaceGame({ matchId, roomCode, opponentId, gameKey }: { mat
   // against it — this is what makes the anti-cheat check below possible.
   const prevValueRef = useRef("");
 
+  // ---- Round transition buffering (item 6) ----
+  // Same reasoning as GuessTheWordGame: the server swaps the sentence for
+  // BOTH players the instant either one finishes it, so whoever didn't just
+  // finish would otherwise see their sentence disappear with zero warning.
+  // displaySentence/displayRound are what's actually rendered; they only
+  // update immediately for the very first sentence of the match or for MY
+  // OWN completed sentence — a sentence that changed because the rival
+  // finished first is held behind a brief banner instead.
+  const [displaySentence, setDisplaySentence] = useState<string | undefined>(undefined);
+  const [displayRound, setDisplayRound] = useState<number | undefined>(undefined);
+  const [opponentAnsweredFirst, setOpponentAnsweredFirst] = useState(false);
+  const prevRoundRef = useRef<number | null>(null);
+  const prevScoresRef = useRef<{ mine: number; opponent: number }>({ mine: 0, opponent: 0 });
+  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const sentence = payload?.sentence as string | undefined;
+  const round = payload?.round as number | undefined;
+  const myScore = userId ? (scores[userId] ?? 0) : 0;
+  const opponentScore = scores[opponentId] ?? 0;
 
-  // A new sentence (ours or the rival's) arrived — clear the box.
   useEffect(() => {
-    setTyped("");
-    prevValueRef.current = "";
-    inputRef.current?.focus();
-  }, [sentence]);
+    if (!sentence || round === undefined) return;
 
-  // Auto-submit the instant the typed text is a full, exact match.
+    if (prevRoundRef.current === null) {
+      setDisplaySentence(sentence);
+      setDisplayRound(round);
+      prevRoundRef.current = round;
+      prevScoresRef.current = { mine: myScore, opponent: opponentScore };
+      return;
+    }
+
+    if (round !== prevRoundRef.current) {
+      const opponentJustScored = opponentScore > prevScoresRef.current.opponent;
+      prevRoundRef.current = round;
+      prevScoresRef.current = { mine: myScore, opponent: opponentScore };
+
+      setTyped("");
+      prevValueRef.current = "";
+
+      if (opponentJustScored) {
+        setOpponentAnsweredFirst(true);
+        if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = setTimeout(() => {
+          setDisplaySentence(sentence);
+          setDisplayRound(round);
+          setOpponentAnsweredFirst(false);
+          inputRef.current?.focus();
+        }, OPPONENT_FIRST_BANNER_MS);
+      } else {
+        // My own completed sentence — I already know I won this round.
+        setDisplaySentence(sentence);
+        setDisplayRound(round);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sentence, round, myScore, opponentScore]);
+
+  useEffect(() => () => { if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current); }, []);
+
+  useEffect(() => { inputRef.current?.focus(); }, [displayRound]);
+
+  // Auto-submit the instant the typed text is a full, exact match against
+  // whatever sentence is currently on screen.
   useEffect(() => {
-    if (!sentence || status !== "active") return;
-    if (typed.trim().toLowerCase() === sentence.trim().toLowerCase()) {
+    if (!displaySentence || status !== "active" || opponentAnsweredFirst) return;
+    if (typed.trim().toLowerCase() === displaySentence.trim().toLowerCase()) {
       hapticTap("medium");
       sendAction("submit_text", { text: typed });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [typed, sentence, status]);
+  }, [typed, displaySentence, status, opponentAnsweredFirst]);
 
-  if (!payload || !sentence) return <LoadingProgress label="Waiting for match to start…" />;
-
-  const myScore = userId ? (scores[userId] ?? 0) : 0;
-  const opponentScore = scores[opponentId] ?? 0;
+  if (!payload || !displaySentence) return <LoadingProgress label="Waiting for match to start…" />;
 
   // Only a genuine single-keystroke append at the end, or a deletion from
   // the end (backspace / select-and-delete), is accepted. Anything else —
@@ -60,32 +116,64 @@ export function TypingRaceGame({ matchId, roomCode, opponentId, gameKey }: { mat
     setTyped(newValue);
   }
 
+  const inputDisabled = status !== "active" || opponentAnsweredFirst;
+
   return (
     <>
       <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18, width: "100%", maxWidth: 380 }}>
-          <p
-            style={{
-              fontSize: 17,
-              lineHeight: 1.6,
-              textAlign: "center",
-              fontFamily: "var(--font-mono)",
-              letterSpacing: "0.01em",
-            }}
-          >
-            {sentence.split("").map((ch, i) => {
-              const typedCh = typed[i];
-              let color = "rgb(var(--color-ink-faint))";
-              if (typedCh !== undefined) {
-                color = typedCh.toLowerCase() === ch.toLowerCase() ? "rgb(var(--color-cyan))" : "rgb(var(--color-magenta))";
-              }
-              return (
-                <span key={i} style={{ color, textDecoration: i === typed.length ? "underline" : "none" }}>
-                  {ch}
-                </span>
-              );
-            })}
-          </p>
+          <div style={{ position: "relative", width: "100%" }}>
+            <p
+              style={{
+                fontSize: 17,
+                lineHeight: 1.6,
+                textAlign: "center",
+                fontFamily: "var(--font-mono)",
+                letterSpacing: "0.01em",
+                opacity: opponentAnsweredFirst ? 0.3 : 1,
+                transition: "opacity 0.25s",
+              }}
+            >
+              {displaySentence.split("").map((ch, i) => {
+                const typedCh = typed[i];
+                let color = "rgb(var(--color-ink-faint))";
+                if (typedCh !== undefined) {
+                  color = typedCh.toLowerCase() === ch.toLowerCase() ? "rgb(var(--color-cyan))" : "rgb(var(--color-magenta))";
+                }
+                return (
+                  <span key={i} style={{ color, textDecoration: i === typed.length ? "underline" : "none" }}>
+                    {ch}
+                  </span>
+                );
+              })}
+            </p>
+
+            <AnimatePresence>
+              {opponentAnsweredFirst && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "rgb(var(--color-ember))",
+                  }}
+                >
+                  <Zap size={14} strokeWidth={2.5} />
+                  Rival typed it first!
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
 
           <input
             ref={inputRef}
@@ -96,7 +184,7 @@ export function TypingRaceGame({ matchId, roomCode, opponentId, gameKey }: { mat
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
-            disabled={status !== "active"}
+            disabled={inputDisabled}
             placeholder="Start typing…"
             style={{
               width: "100%",
