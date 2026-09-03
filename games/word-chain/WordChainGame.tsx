@@ -6,6 +6,7 @@ import { Delete, Check } from "lucide-react";
 import { useGameMatch } from "@/games/engine/useGameMatch";
 import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
+import { TurnIndicator } from "@/components/ui/TurnIndicator";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
@@ -179,17 +180,11 @@ export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matc
                 border: "1.5px solid",
               }}
             >
-              <p
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  color: myTurn ? "rgb(var(--color-cyan))" : "rgb(var(--color-ink-muted))",
-                }}
-              >
-                {myTurn ? "● Your turn" : "Rival's turn"}
-              </p>
+              {/* Same shared pill used in Connect Four / Dots and Boxes —
+                  swapped in for what used to be a plain 12px uppercase
+                  label so a turn flip is hard to miss here too, on top of
+                  the card's own border/glow treatment (kept as-is above). */}
+              <TurnIndicator myTurn={myTurn} activeLabel="Your Turn" waitingLabel="Rival's Turn" />
 
               {/* The countdown only ever means something to the player who
                   can actually act on it — showing it during the rival's
@@ -268,11 +263,19 @@ export function WordChainGame({ matchId, roomCode, opponentId, gameKey }: { matc
           own padded/scrollable column. inset-x-0 + bottom-0 with no outer
           margin means it sits flush against the screen edge; the real
           BottomNav is already hidden while a match is in progress, so
-          there's nothing underneath it to collide with. */}
+          there's nothing underneath it to collide with.
+          paddingBottom uses --app-safe-bottom (not plain
+          env(safe-area-inset-bottom)) — the app's own convention, documented
+          in app/globals.css: plain env(safe-area-inset-*) does NOT resolve
+          inside Telegram's in-app WebView and silently evaluates to 0px
+          there, so this bar was previously only ever getting its 10px
+          fallback on the one platform (Telegram) where the real inset
+          actually matters, i.e. never genuinely clearing Telegram's own
+          fullscreen-mode overlay controls the way it looked like it did. */}
       <div
         ref={keyboardRef}
         className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-surface/95 backdrop-blur-glass"
-        style={{ paddingLeft: 10, paddingRight: 10, paddingTop: 8, paddingBottom: "max(env(safe-area-inset-bottom), 10px)" }}
+        style={{ paddingLeft: 10, paddingRight: 10, paddingTop: 8, paddingBottom: "max(var(--app-safe-bottom, 0px), 10px)" }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 380, margin: "0 auto" }}>
           {LETTER_ROWS.map((row, i) => (
