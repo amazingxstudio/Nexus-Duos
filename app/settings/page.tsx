@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Volume2, Vibrate, RefreshCw, Sun, Moon, SunMoon, Trophy, ChevronRight } from "lucide-react";
+import { Eye, EyeOff, Volume2, Vibrate, RefreshCw, Sun, Moon, SunMoon, Palette, Trophy, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useThemeStore, ThemeMode } from "@/store/useThemeStore";
@@ -17,7 +17,7 @@ const CACHE_KEY = "nexus_settings_cache";
 
 export default function SettingsPage() {
   const token = useAuthStore((s) => s.token);
-  const { mode, setMode } = useThemeStore();
+  const { mode, setMode, telegramSyncEnabled, setTelegramSyncEnabled } = useThemeStore();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState(false);
 
@@ -82,7 +82,11 @@ export default function SettingsPage() {
       <h1 className="mb-6 font-display text-2xl font-bold text-ink-primary">Settings</h1>
 
       <p className="mb-3 text-xs uppercase tracking-wide text-ink-muted">Theme</p>
-      <div className="glass-panel mb-6 grid grid-cols-3 gap-1 p-1">
+      {/* Telegram sync overrides the manual picker below when on — see
+          ThemeProvider.tsx. Buttons are disabled rather than hidden so the
+          currently-active theme (as mirrored from Telegram) still reads
+          clearly even while sync is on. */}
+      <div className={`glass-panel mb-3 grid grid-cols-3 gap-1 p-1 transition-opacity ${telegramSyncEnabled ? "pointer-events-none opacity-50" : ""}`}>
         {THEME_OPTIONS.map((opt) => {
           const Icon = opt.icon;
           const active = mode === opt.mode;
@@ -90,6 +94,7 @@ export default function SettingsPage() {
             <button
               key={opt.mode}
               onClick={() => setMode(opt.mode)}
+              disabled={telegramSyncEnabled}
               className={`flex flex-col items-center gap-1 rounded-card py-3 text-xs transition-colors ${active ? "bg-cyan/10 text-cyan" : "text-ink-muted"}`}
             >
               <Icon size={16} />
@@ -97,6 +102,15 @@ export default function SettingsPage() {
             </button>
           );
         })}
+      </div>
+      <div className="mb-6 flex flex-col gap-3">
+        <ToggleRow
+          icon={Palette}
+          label="Sync with Telegram theme"
+          description="Follow Telegram's own light/dark setting instead of choosing above"
+          checked={telegramSyncEnabled}
+          onChange={setTelegramSyncEnabled}
+        />
       </div>
 
       <div className="flex flex-col gap-3">
