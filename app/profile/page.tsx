@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pencil, Check, Copy, ChevronUp, Trophy, Target, Percent, User } from "lucide-react";
-import { useAuthStore } from "@/store/useAuthStore";
+import { Pencil, Check, Copy, ChevronUp, Trophy, Target, Percent, User, Users } from "lucide-react";
+import { useAuthStore, Profile, Settings } from "@/store/useAuthStore";
 import { apiFetch } from "@/lib/api";
 
 function TelegramIcon() {
@@ -23,12 +24,45 @@ function MailIcon() {
   );
 }
 
+interface VisitorCard { nickname: string; player_id: string; photo_url?: string | null; }
+
+interface MeResponse {
+  id: string; telegram_id: string; first_name: string; username?: string | null; photo_url?: string | null;
+  profile: Profile; settings: Settings; recent_visitors: VisitorCard[];
+}
+
 export default function MyProfilePage() {
   const { user, token, setSession } = useAuthStore();
   const [editing, setEditing] = useState(false);
   const [nickname, setNickname] = useState(user?.profile?.nickname ?? "");
   const [copied, setCopied] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [visitors, setVisitors] = useState<VisitorCard[]>([]);
+
+  // Fetches fresh stats (and recent visitors) every time this page is
+  // opened — mirrors the History page's own mount-fetch pattern. Without
+  // this, landing here right after a match kept showing whatever
+  // wins/losses were cached in the auth store at login, since nothing
+  // previously re-fetched /profile/me on navigation (spec D.12).
+  // RoomSync.tsx also refreshes these the instant a match ends, so this is
+  // a second, independent guarantee for whenever this mount-fetch is the
+  // one that actually runs first.
+  useEffect(() => {
+    const { token: currentToken, setSession: applySession } = useAuthStore.getState();
+    if (!currentToken) return;
+    apiFetch<MeResponse>("/profile/me", { token: currentToken })
+      .then((res) => {
+        applySession(currentToken, {
+          id: res.id, telegram_id: res.telegram_id, first_name: res.first_name,
+          username: res.username, photo_url: res.photo_url, profile: res.profile, settings: res.settings,
+        });
+        setVisitors(res.recent_visitors ?? []);
+      })
+      .catch(() => {
+        // Non-critical — the page still renders from whatever the auth
+        // store already has cached from login.
+      });
+  }, []);
 
   async function saveNickname() {
     if (!nickname.trim() || !user) return;
@@ -113,6 +147,22 @@ export default function MyProfilePage() {
           <p className="text-ink-muted">{user?.profile?.draws ?? 0} Draws</p>
         </div>
       </section>
+
+      {visitors.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm uppercase tracking-widest text-ink-muted">
+            <Users size={13} />Profile Visitors
+          </h2>
+          <div className="flex gap-3">
+            {visitors.map((v) => (
+              <Link key={v.player_id} href={`/profile/${v.player_id}`} className="glass-card flex flex-1 flex-col items-center gap-1.5 border border-white/[0.08] p-3">
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-surface-raised bg-cover bg-center" style={v.photo_url ? { backgroundImage: `url(${v.photo_url})` } : undefined} />
+                <p className="w-full truncate text-center text-xs text-ink-muted">{v.nickname}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <button onClick={() => setAboutOpen(true)} className="mx-auto mt-10 flex flex-col items-center gap-1 text-ink-faint">
         <ChevronUp size={16} />
