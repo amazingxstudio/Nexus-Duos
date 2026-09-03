@@ -6,6 +6,7 @@ import { BellRing } from "lucide-react";
 import { useGameMatch } from "@/games/engine/useGameMatch";
 import { LoadingProgress } from "@/components/ui/LoadingProgress";
 import { GameShell } from "@/games/engine/GameShell";
+import { TurnIndicator } from "@/components/ui/TurnIndicator";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MatchResultOverlay } from "@/components/room/MatchResultOverlay";
 import { hapticTap } from "@/lib/haptics";
@@ -21,7 +22,9 @@ const HIGHLIGHT_MS = 2000;
 // under /games/, and one missing folder in tailwind.config.ts's content
 // list previously meant every such class here was silently dropped,
 // collapsing the whole board to nothing visible. Inline styles always
-// work regardless of that.
+// work regardless of that. (TurnIndicator itself lives under
+// components/ui/, which IS scanned, so it's safe to use real Tailwind
+// classes internally — see its own file for why.)
 const DOT = 8;
 const CELL = 27;
 
@@ -89,17 +92,7 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { m
     <>
       <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch} nudgeSignal={nudgeSignal}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-          <p
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: myTurn ? "rgb(var(--color-cyan))" : "rgb(var(--color-ink-muted))",
-            }}
-          >
-            {myTurn ? "Your move" : "Rival's move"}
-          </p>
+          <TurnIndicator myTurn={myTurn} activeLabel="Your Move" waitingLabel="Rival's Move" />
 
           <div style={{ position: "relative" }}>
             <div
