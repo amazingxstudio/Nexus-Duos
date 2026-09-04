@@ -21,6 +21,7 @@ const config: Config = {
         magenta: { DEFAULT: withOpacity("--color-magenta"), dim: withOpacity("--color-magenta-dim") },
         violet: { DEFAULT: withOpacity("--color-violet"), dim: withOpacity("--color-violet-dim") },
         ember: { DEFAULT: withOpacity("--color-ember"), dim: withOpacity("--color-ember-dim") },
+        "button-text": withOpacity("--color-button-text"),
         ink: {
           primary: withOpacity("--color-ink-primary"),
           muted: withOpacity("--color-ink-muted"),
