@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Volume2, Vibrate, RefreshCw, Sun, Moon, SunMoon, Palette, Trophy, ChevronRight } from "lucide-react";
+import { Eye, EyeOff, Volume2, Vibrate, RefreshCw, Sun, Moon, SunMoon, Palette } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useThemeStore, ThemeMode } from "@/store/useThemeStore";
@@ -107,7 +106,7 @@ export default function SettingsPage() {
         <ToggleRow
           icon={Palette}
           label="Sync with Telegram theme"
-          description="Follow Telegram's own light/dark setting instead of choosing above"
+          description="Match Telegram's whole current theme — colors, buttons, and nav — instead of choosing above"
           checked={telegramSyncEnabled}
           onChange={setTelegramSyncEnabled}
         />
@@ -131,16 +130,6 @@ export default function SettingsPage() {
           disabled={!settings.show_online_status}
         />
       </div>
-
-      <p className="mb-3 mt-6 text-xs uppercase tracking-wide text-ink-muted">More</p>
-      <Link href="/leaderboard" className="glass-card flex items-center gap-3 border border-white/[0.08] p-4">
-        <span className="icon-badge h-9 w-9 shrink-0 bg-cyan/10"><Trophy size={16} className="text-cyan" /></span>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-ink-primary">Leaderboard</p>
-          <p className="mt-0.5 text-xs text-ink-muted">See how you rank against other players</p>
-        </div>
-        <ChevronRight size={16} className="shrink-0 text-ink-faint" />
-      </Link>
     </main>
   );
 }
