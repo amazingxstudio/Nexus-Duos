@@ -4,11 +4,21 @@ import { TelegramProvider } from "./TelegramProvider";
 import { SocketProvider } from "./SocketProvider";
 import { AuthGate } from "./AuthGate";
 import { InviteListener } from "./InviteListener";
+import { MessageNotificationListener } from "./MessageNotificationListener";
 import { RoomSync } from "./RoomSync";
 import { TelegramBackButton } from "./TelegramBackButton";
 import { ActiveRoomFloatingButton } from "@/components/ui/ActiveRoomFloatingButton";
+import { MessagePanel } from "@/components/friends/MessagePanel";
+import { useMessagesStore } from "@/store/useMessagesStore";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
+  // Global — the same conversation sheet opens whether it's triggered from
+  // a Friends-list row or a swiped-open incoming-DM banner (see
+  // MessageNotificationListener), so it lives once at the app root instead
+  // of being owned by the Friends page.
+  const openTarget = useMessagesStore((s) => s.openTarget);
+  const closeConversation = useMessagesStore((s) => s.closeConversation);
+
   return (
     <TelegramProvider>
       <SocketProvider>
@@ -19,6 +29,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           <TelegramBackButton />
           {children}
           <InviteListener />
+          <MessageNotificationListener />
+          <MessagePanel target={openTarget} onClose={closeConversation} />
           <ActiveRoomFloatingButton />
         </AuthGate>
       </SocketProvider>

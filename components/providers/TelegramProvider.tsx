@@ -17,6 +17,11 @@ declare global {
         selectionChanged: () => void;
       };
       colorScheme: "light" | "dark";
+      /** Bot API 6.0+. The live palette of whichever theme the user has
+       * set for the whole Telegram app — background/text/hint/button
+       * colors etc. as hex strings. See lib/telegramTheme.ts for how
+       * this becomes this app's own CSS tokens under Telegram sync. */
+      themeParams?: Record<string, string>;
       /** Bot API 6.4+. Reads the device clipboard through Telegram's native
        * bridge — needed because the standard navigator.clipboard.readText()
        * is blocked inside Telegram's in-app WebView on most platforms. */
@@ -71,6 +76,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const setStatus = useAuthStore((s) => s.setStatus);
   const hasRestoredSession = useAuthStore((s) => Boolean(s.token && s.user));
   const setTelegramColorScheme = useThemeStore((s) => s.setTelegramColorScheme);
+  const setTelegramThemeParams = useThemeStore((s) => s.setTelegramThemeParams);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -79,7 +85,9 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     tg.ready(); tg.expand(); tg.requestFullscreen?.(); tg.disableVerticalSwipes?.();
-    tg.setHeaderColor?.("#06060B"); tg.setBackgroundColor?.("#06060B");
+    // Native header/WebView chrome color is owned by ThemeProvider (it
+    // needs to react to theme changes and Telegram theme sync, not just
+    // set once here) — no color call needed on this first-mount effect.
 
     // Telegram's WebView doesn't actually populate the standard CSS
     // env(safe-area-inset-*) variables (0px always, confirmed Telegram-iOS
@@ -117,6 +125,18 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     applyTelegramColorScheme();
     tg.onEvent?.("themeChanged", applyTelegramColorScheme);
 
+    // Full theme-param sync (spec A.5a) — captures the WHOLE current
+    // Telegram theme (background/text/hint/button colors, not just
+    // light-vs-dark), re-read live on the same themeChanged event so
+    // switching Telegram themes while the Mini App is open updates
+    // instantly. ThemeProvider.tsx decides whether to actually apply
+    // these as CSS overrides (only when telegramSyncEnabled is on).
+    function applyTelegramThemeParams() {
+      setTelegramThemeParams(tg!.themeParams ?? null);
+    }
+    applyTelegramThemeParams();
+    tg.onEvent?.("themeChanged", applyTelegramThemeParams);
+
     async function authenticate() {
       if (!hasRestoredSession) setStatus("authenticating");
 
@@ -142,6 +162,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       tg.offEvent?.("contentSafeAreaChanged", applySafeAreaVars);
       tg.offEvent?.("fullscreenChanged", applySafeAreaVars);
       tg.offEvent?.("themeChanged", applyTelegramColorScheme);
+      tg.offEvent?.("themeChanged", applyTelegramThemeParams);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

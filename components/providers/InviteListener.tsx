@@ -43,21 +43,14 @@ export function InviteListener() {
       router.push(`/room/${data.room_code}`);
     }
     function onDeclined() { setInvite(null); }
-    // Friends-list direct messages (spec D.14) are their own thing with
-    // their own panel (components/friends/MessagePanel.tsx) — no popup
-    // card here, just the same "something arrived" sound so it's audible
-    // even while the Friends list/message panel isn't open.
-    function onDmReceived() { notify(); }
 
     socket.on("invite:received", onReceived);
     socket.on("invite:accepted", onAccepted);
     socket.on("invite:declined", onDeclined);
-    socket.on("dm:received", onDmReceived);
     return () => {
       socket.off("invite:received", onReceived);
       socket.off("invite:accepted", onAccepted);
       socket.off("invite:declined", onDeclined);
-      socket.off("dm:received", onDmReceived);
     };
   }, [socket, router]);
 
