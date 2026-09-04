@@ -9,7 +9,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { GameInvitePickerSheet } from "@/components/room/GameInvitePickerSheet";
 import { OutgoingInviteToast } from "@/components/room/OutgoingInviteToast";
-import { MessagePanel } from "@/components/friends/MessagePanel";
+import { useMessagesStore } from "@/store/useMessagesStore";
 
 interface PlayerCard {
   user_id: string; nickname: string; player_id: string; photo_url?: string | null; online: boolean;
@@ -43,7 +43,8 @@ export default function FriendsPage() {
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
   const [pickerFor, setPickerFor] = useState<PlayerCard | null>(null);
   const [pendingInvite, setPendingInvite] = useState<{ user_id: string; nickname: string } | null>(null);
-  const [messageTarget, setMessageTarget] = useState<{ user_id: string; nickname: string } | null>(null);
+  const openConversation = useMessagesStore((s) => s.openConversation);
+  const unreadBySender = useMessagesStore((s) => s.unreadBySender);
   const [notice, setNotice] = useState<string | null>(null);
 
   function loadFriends() {
@@ -181,13 +182,6 @@ export default function FriendsPage() {
                   <p className="text-xs text-ink-muted">{f.last_seen_label ?? "Last seen recently"}</p>
                 </div>
               </Link>
-              <button
-                onClick={() => setMessageTarget({ user_id: f.user_id, nickname: f.nickname })}
-                aria-label={`Message ${f.nickname}`}
-                className="icon-badge h-9 w-9 shrink-0 bg-white/5 text-ink-muted"
-              >
-                <MessageCircle size={15} />
-              </button>
               {f.online && (
                 <button
                   onClick={() => setPickerFor(f)}
@@ -198,6 +192,16 @@ export default function FriendsPage() {
                   {cooldown > 0 ? <span className="stat-mono text-[11px]">{cooldown}s</span> : <Swords size={16} />}
                 </button>
               )}
+              <button
+                onClick={() => openConversation({ user_id: f.user_id, nickname: f.nickname })}
+                aria-label={`Message ${f.nickname}`}
+                className="icon-badge relative h-9 w-9 shrink-0 bg-white/5 text-ink-muted"
+              >
+                <MessageCircle size={15} />
+                {!!unreadBySender[f.user_id] && (
+                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-magenta ring-2 ring-void" />
+                )}
+              </button>
             </motion.div>
           );
         })}
@@ -211,7 +215,6 @@ export default function FriendsPage() {
 
       <GameInvitePickerSheet target={pickerFor} onClose={() => setPickerFor(null)} onPick={sendInvite} />
       <OutgoingInviteToast target={pendingInvite} onDismiss={() => setPendingInvite(null)} />
-      <MessagePanel target={messageTarget} onClose={() => setMessageTarget(null)} />
     </main>
   );
 }
