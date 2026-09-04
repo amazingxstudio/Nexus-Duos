@@ -7,11 +7,6 @@ import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
 
-interface MessageTarget {
-  user_id: string;
-  nickname: string;
-}
-
 interface ChatMessage {
   id: string;
   sender_id: string;
@@ -21,7 +16,7 @@ interface ChatMessage {
 }
 
 interface MessagePanelProps {
-  target: MessageTarget | null;
+  target: { user_id: string; nickname: string } | null;
   onClose: () => void;
 }
 
@@ -115,7 +110,7 @@ export function MessagePanel({ target, onClose }: MessagePanelProps) {
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 320, damping: 32 }}
-            className="glass-panel flex max-h-[80vh] w-full max-w-sm flex-col rounded-t-3xl rounded-b-none p-4 pb-6"
+            className="glass-panel flex h-[85vh] max-h-[85vh] w-full max-w-sm flex-col rounded-t-3xl rounded-b-none p-4 pb-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
