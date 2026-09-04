@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Swords, Hash, ArrowRight, Loader2, Users, ClipboardPaste, X, Circle } from "lucide-react";
+import { Swords, Hash, ArrowRight, Loader2, Users, ClipboardPaste, X, Circle, MessageCircle } from "lucide-react";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
@@ -33,6 +33,8 @@ export default function FindPage() {
   const [pickerFor, setPickerFor] = useState<PlayerCard | null>(null);
   const [pendingInvite, setPendingInvite] = useState<{ user_id: string; nickname: string } | null>(null);
   const hasUnreadMessages = useMessagesStore((s) => Object.keys(s.unreadBySender).length > 0);
+  const unreadBySender = useMessagesStore((s) => s.unreadBySender);
+  const openConversation = useMessagesStore((s) => s.openConversation);
 
   useEffect(() => {
     if (!token) return;
@@ -182,7 +184,7 @@ export default function FindPage() {
           <p className="text-xs uppercase tracking-wide text-ink-muted">Friends</p>
           <Link href="/friends" className="icon-badge relative h-8 w-8 glass-panel" aria-label="Friends">
             <Users size={14} className="text-ink-muted" />
-            {hasUnreadMessages && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-magenta ring-2 ring-void" />}
+            {hasUnreadMessages && <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-magenta ring-2 ring-void" />}
           </Link>
         </div>
 
@@ -204,6 +206,16 @@ export default function FindPage() {
                 </Link>
                 <button onClick={() => setPickerFor(f)} disabled={sentInvite === f.user_id} className="icon-badge h-9 w-9 shrink-0 bg-cyan text-void disabled:opacity-50">
                   <Swords size={15} />
+                </button>
+                <button
+                  onClick={() => openConversation({ user_id: f.user_id, nickname: f.nickname })}
+                  aria-label={`Message ${f.nickname}`}
+                  className="icon-badge relative h-9 w-9 shrink-0 bg-white/5 text-ink-muted"
+                >
+                  <MessageCircle size={17} strokeWidth={2} />
+                  {!!unreadBySender[f.user_id] && (
+                    <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-magenta ring-2 ring-void" />
+                  )}
                 </button>
               </div>
             ))}
