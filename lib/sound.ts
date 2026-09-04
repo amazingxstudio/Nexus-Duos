@@ -181,3 +181,51 @@ export function playNotificationSound() {
   tone(880, 0, 0.11, "sine", 0.12);
   tone(1318.5, 0.09, 0.16, "sine", 0.1);
 }
+
+// ---- Incoming direct-message chime (spec D.14a) --------------------------
+//
+// If a real Telegram notification sound file is dropped in at
+// /public/sounds/telegram-notification.mp3 (this repo doesn't ship one —
+// this build environment has no network access to fetch Telegram's actual
+// asset, and it isn't ours to redistribute), it's played verbatim. Without
+// that file this falls back to a synthesized bell — two quick ascending
+// notes, each with a quiet octave-ish overtone layered on top of the plain
+// sine so it reads as a "bell" timbre rather than a flat beep — which is
+// the same short, bright, two-tone shape as Telegram's own default message
+// tone, just generated instead of sampled.
+let dmAudioEl: HTMLAudioElement | null = null;
+let dmAudioUnavailable = false;
+
+function getDmAudioEl(): HTMLAudioElement | null {
+  if (typeof window === "undefined" || dmAudioUnavailable) return null;
+  if (!dmAudioEl) {
+    dmAudioEl = new Audio("/sounds/telegram-notification.mp3");
+    dmAudioEl.preload = "auto";
+    dmAudioEl.addEventListener("error", () => { dmAudioUnavailable = true; });
+  }
+  return dmAudioEl;
+}
+
+function bell(freq: number, startOffset: number, duration: number, peakGain: number) {
+  tone(freq, startOffset, duration, "sine", peakGain);
+  tone(freq * 2.01, startOffset, duration * 0.55, "sine", peakGain * 0.22);
+}
+
+function playSynthesizedDmChime() {
+  bell(988, 0, 0.32, 0.15);
+  bell(1318.5, 0.09, 0.38, 0.12);
+}
+
+export function playDmNotificationSound() {
+  if (!soundEnabled()) return;
+  const el = getDmAudioEl();
+  if (el) {
+    el.currentTime = 0;
+    el.play().catch(() => {
+      dmAudioUnavailable = true;
+      playSynthesizedDmChime();
+    });
+    return;
+  }
+  playSynthesizedDmChime();
+}
