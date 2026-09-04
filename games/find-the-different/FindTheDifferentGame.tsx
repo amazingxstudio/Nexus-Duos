@@ -30,7 +30,7 @@ const ACCENT_COLOR: Record<string, string> = {
   ember: "rgb(var(--color-ember))",
 };
 
-export function FindTheDifferentGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
+export function FindTheDifferentGame({ matchId, roomCode, opponentId, opponentNickname, gameKey }: { matchId: string; roomCode: string; opponentId: string; opponentNickname: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
   const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, leaveMatch } = useGameMatch({ matchId, roomCode });
   const [wrongIndex, setWrongIndex] = useState<number | null>(null);
@@ -154,7 +154,7 @@ export function FindTheDifferentGame({ matchId, roomCode, opponentId, gameKey }:
         </div>
       </GameShell>
       {status === "finished" && result && userId && (
-        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} />
+        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} opponentNickname={opponentNickname} />
       )}
     </>
   );
