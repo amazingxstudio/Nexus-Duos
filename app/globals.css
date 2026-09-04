@@ -21,6 +21,13 @@
   --color-ink-primary: 245 247 255;
   --color-ink-muted: 139 147 176;
   --color-ink-faint: 74 79 102;
+  /* Text color for filled primary buttons (.btn-primary). Aliases void by
+     default (unchanged dark-theme look: void-dark text reads as
+     near-black on the bright cyan button); Telegram theme sync
+     (lib/telegramTheme.ts) overrides this directly with the synced
+     theme's actual button_text_color instead of assuming void still
+     contrasts against whatever button color got synced in. */
+  --color-button-text: var(--color-void);
   /* How strong the ambient background orbs read at. Dark theme keeps this
      fairly restrained — several large, fully-saturated orbs overlapping
      in the middle of the screen (where panels actually sit) blend toward
@@ -48,15 +55,22 @@
   --app-safe-right: calc(var(--tg-safe-area-inset-right, 0px) + var(--tg-content-safe-area-inset-right, 0px));
 }
 
-/* Light theme — toggled via the .theme-light class on <html> (see ThemeProvider) */
+/* Light theme — toggled via the .theme-light class on <html> (see ThemeProvider).
+   Palette matches Telegram's own default/original light theme (the
+   classic bg #fff / secondary #f0f0f0 / text #000 / hint #999 / accent
+   #2481cc palette Telegram itself ships as the WebApp default theme), so
+   the app's un-synced light mode already looks like "Telegram, but
+   light" rather than a bespoke palette — see also lib/telegramTheme.ts,
+   which computes the SAME kind of mapping live from the user's actual
+   current Telegram theme when Settings' Telegram-sync toggle is on. */
 .theme-light {
   color-scheme: light;
   --orb-opacity: 0.4;
-  --color-void: 243 244 250;
-  --color-surface: 255 255 255;
-  --color-surface-raised: 237 239 247;
-  --color-cyan: 0 144 168;
-  --color-cyan-dim: 0 184 212;
+  --color-void: 255 255 255;
+  --color-surface: 240 240 240;
+  --color-surface-raised: 230 230 232;
+  --color-cyan: 36 129 204;
+  --color-cyan-dim: 84 164 224;
   --color-magenta: 196 0 100;
   --color-magenta-dim: 255 46 154;
   --color-violet: 91 63 217;
@@ -65,7 +79,8 @@
   --color-ember-dim: 255 180 84;
   --color-ink-primary: 20 21 28;
   --color-ink-muted: 91 95 112;
-  --color-ink-faint: 144 150 168;
+  --color-ink-faint: 178 179 190;
+  --color-button-text: 255 255 255;
 }
 
 html, body {
@@ -92,6 +107,18 @@ body {
      iOS's Select/Copy/Paste menu — undo that here so fields that need
      native paste (e.g. the join-code input) get the normal callout. */
   -webkit-touch-callout: default;
+}
+
+/* Belt-and-suspenders for real <a href> elements specifically (About
+   modal's Telegram-username / email links) — body already sets
+   -webkit-touch-callout: none globally, but Telegram's in-app WebView has
+   been observed still popping its native "Open/Copy/Share" callout on a
+   long-pressed anchor unless the property is set directly on that
+   element rather than relied on as inherited. */
+.no-callout {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Referenced via inline style (not the animate-float utility) by
@@ -153,6 +180,20 @@ img.draggable-ok { pointer-events: auto; }
   }
   .theme-light .glass-panel {
     @apply bg-white/50 border-white/70;
+  }
+  /* shadow-glass bakes in a fixed 60%-opacity BLACK drop shadow (see
+     tailwind.config.ts) that reads as intended "glass sitting on a dark
+     table" in dark theme, but on light theme's near-white background it
+     shows through every glass surface as a hard dark rectangle behind
+     it — most obvious on incoming message bubbles in MessagePanel.tsx,
+     since those are the only bare (non-tinted) .glass-panel usage right
+     next to an outgoing bubble for direct comparison. Swapped for a soft
+     ink-tinted shadow that actually reads as a glass surface in light
+     mode instead of a dark box glued behind it. */
+  .theme-light .glass-panel,
+  .theme-light .glass-card,
+  .theme-light .btn-ghost {
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.5), 0 8px 24px -10px rgba(20, 21, 28, 0.18);
   }
   .glass-panel-cyan { @apply glass-panel border-cyan/30 shadow-glow-cyan; }
   .glass-panel-magenta { @apply glass-panel border-magenta/30 shadow-glow-magenta; }
@@ -222,7 +263,7 @@ img.draggable-ok { pointer-events: auto; }
   /* ---- Buttons ---- */
   .btn-primary {
     @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full px-6 py-3
-      font-display font-semibold text-void bg-cyan
+      font-display font-semibold text-button-text bg-cyan
       shadow-glow-cyan active:scale-[0.96] transition-transform duration-150
       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan;
   }
@@ -314,10 +355,10 @@ img.draggable-ok { pointer-events: auto; }
     inset-inline: 0.5rem;
     inset-block: 0.125rem;
     border-radius: 9999px;
-    background: rgba(0, 229, 255, 0.16);
-  }
-  .theme-light .nav-liquid-blob {
-    background: rgba(0, 144, 168, 0.16);
+    /* Var-driven (not a hardcoded cyan hex) so the active-tab blob follows
+       Telegram theme sync's accent color too — see lib/telegramTheme.ts,
+       which overrides --color-cyan directly. */
+    background: rgb(var(--color-cyan) / 0.16);
   }
   .nav-liquid-drip {
     position: absolute;
@@ -327,11 +368,7 @@ img.draggable-ok { pointer-events: auto; }
     height: 1.3rem;
     transform: translateX(-50%);
     border-radius: 9999px;
-    background: rgba(0, 229, 255, 0.16);
-    box-shadow: 0 10px 16px -6px rgba(0, 229, 255, 0.45);
-  }
-  .theme-light .nav-liquid-drip {
-    background: rgba(0, 144, 168, 0.16);
-    box-shadow: 0 10px 16px -6px rgba(0, 144, 168, 0.4);
+    background: rgb(var(--color-cyan) / 0.16);
+    box-shadow: 0 10px 16px -6px rgb(var(--color-cyan) / 0.45);
   }
   }
