@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { User, Trophy, Percent, Target, Lock, Bot, EyeOff, UserPlus, Check, Copy, Users } from "lucide-react";
+import { User, Trophy, Percent, Target, Lock, Bot, EyeOff, UserPlus, Check, Copy } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getGameMeta } from "@/lib/games";
+import { VisitorStack } from "@/components/ui/VisitorStack";
 
 interface VisitorCard { nickname: string; player_id: string; photo_url?: string | null; }
 
@@ -75,7 +76,8 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center px-6 pb-28 pt-14">
+    <main className="relative flex min-h-dvh flex-col items-center px-6 pb-28 pt-14">
+      <VisitorStack visitors={profile.recent_visitors} className="absolute right-4 top-4 z-20" />
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative">
         <span className="absolute -inset-1.5 rounded-full border border-magenta opacity-40 animate-pulse-glow" />
         <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-magenta shadow-glow-magenta bg-surface-raised bg-cover bg-center" style={profile.photo_url ? { backgroundImage: `url(${profile.photo_url})` } : undefined}>
@@ -109,26 +111,6 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
         <p className="text-magenta">{profile.losses} Losses</p>
         <p className="text-ink-muted">{profile.draws} Draws</p>
       </div>
-
-      {profile.recent_visitors.length > 0 && (
-        <div className="mt-8 w-full max-w-sm">
-          <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm uppercase tracking-widest text-ink-muted">
-            <Users size={13} />Profile Visitors
-          </h2>
-          {/* Each card links back into this exact same page component with
-              a different playerId — clicking through visitor → visitor's
-              visitor → ... works for free, no dedicated recursive component
-              needed (spec D.13). */}
-          <div className="flex gap-3">
-            {profile.recent_visitors.map((v) => (
-              <Link key={v.player_id} href={`/profile/${v.player_id}`} className="glass-card flex flex-1 flex-col items-center gap-1.5 border border-white/[0.08] p-3">
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-surface-raised bg-cover bg-center" style={v.photo_url ? { backgroundImage: `url(${v.photo_url})` } : undefined} />
-                <p className="w-full truncate text-center text-xs text-ink-muted">{v.nickname}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="mt-10 w-full max-w-sm">
         <h2 className="mb-3 font-display text-sm uppercase tracking-widest text-ink-muted">Recent Matches</h2>
