@@ -179,7 +179,11 @@ export default function FriendsPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink-primary">{f.nickname}</p>
-                  <p className="text-xs text-ink-muted">{f.last_seen_label ?? "Last seen recently"}</p>
+                  {f.online ? (
+                    <p className="text-xs text-cyan">Online</p>
+                  ) : (
+                    <p className="text-xs text-ink-muted">{f.last_seen_label ?? "Last seen recently"}</p>
+                  )}
                 </div>
               </Link>
               {f.online && (
@@ -197,9 +201,9 @@ export default function FriendsPage() {
                 aria-label={`Message ${f.nickname}`}
                 className="icon-badge relative h-9 w-9 shrink-0 bg-white/5 text-ink-muted"
               >
-                <MessageCircle size={15} />
+                <MessageCircle size={17} strokeWidth={2} />
                 {!!unreadBySender[f.user_id] && (
-                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-magenta ring-2 ring-void" />
+                  <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-magenta ring-2 ring-void" />
                 )}
               </button>
             </motion.div>
