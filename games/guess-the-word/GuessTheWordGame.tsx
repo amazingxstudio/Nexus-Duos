@@ -16,16 +16,27 @@ const DURATION_MS = 90 * 1000;
 // screen before the next clue actually replaces it — long enough to read,
 // short enough not to feel like dead time between rounds.
 const OPPONENT_FIRST_BANNER_MS = 1100;
+// A stuck word never blocks the match (spec D.21a) — matches
+// quick_math's identical ROUND_TIMEOUT_SECONDS.
+const ROUND_TIMEOUT_SECONDS = 8;
 
-type RoundPayload = { round: number; clue: string; word_length: number; first_letter: string; last_letter: string };
+type RoundPayload = { round: number; clue: string; word_length: number; first_letter: string; last_letter: string; round_started_at?: number; last_skip_reason?: string | null };
 
-export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
+export function GuessTheWordGame({ matchId, roomCode, opponentId, opponentNickname, gameKey }: { matchId: string; roomCode: string; opponentId: string; opponentNickname: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
   const socket = useSocket();
   const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, leaveMatch } = useGameMatch({ matchId, roomCode });
   const [guess, setGuess] = useState("");
   const [shake, setShake] = useState(false);
+  const [skipMessage, setSkipMessage] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
   const inputRef = useRef<HTMLInputElement>(null);
+  const firedTimeoutRef = useRef<number | null>(null); // round_started_at we've already reported a timeout for
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 100);
+    return () => clearInterval(id);
+  }, []);
 
   // ---- Round transition buffering (item 6) ----
   // The server advances the round for BOTH players the instant either one
@@ -34,9 +45,11 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
   // instant the rival's guess lands. displayRound is what's actually
   // rendered; it only ever gets updated from the real `payload` (a) on the
   // very first round of the match, (b) immediately when a round changes
-  // because of MY OWN correct guess, or (c) after a short delay — with an
-  // "opponent answered first" banner showing in the meantime — when the
-  // round changed because the rival answered first.
+  // because of MY OWN correct guess or an auto-skip (neither side "just
+  // lost" a round they were about to win, so there's nothing to soften),
+  // or (c) after a short delay — with an "opponent answered first" banner
+  // showing in the meantime — when the round changed because the rival
+  // answered first.
   const [displayRound, setDisplayRound] = useState<RoundPayload | null>(null);
   const [opponentAnsweredFirst, setOpponentAnsweredFirst] = useState(false);
   const prevRoundRef = useRef<number | null>(null);
@@ -60,6 +73,7 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
 
     if (incoming.round !== prevRoundRef.current) {
       const opponentJustScored = opponentScore > prevScoresRef.current.opponent;
+      const skipReason = incoming.last_skip_reason;
       prevRoundRef.current = incoming.round;
       prevScoresRef.current = { mine: myScore, opponent: opponentScore };
 
@@ -68,7 +82,14 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
       // submit into) but the actual clue swap is held behind the banner.
       setGuess("");
 
-      if (opponentJustScored) {
+      if (skipReason) {
+        // Neither player answered in time — nobody "just lost" a round
+        // they were about to win, so there's nothing to soften; swap
+        // immediately and just explain why (spec D.21a).
+        setSkipMessage(skipReason === "TIMEOUT" ? "Time's up — new word" : "Both stuck — new word");
+        setTimeout(() => setSkipMessage(null), 1300);
+        setDisplayRound(incoming);
+      } else if (opponentJustScored) {
         setOpponentAnsweredFirst(true);
         if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
         transitionTimerRef.current = setTimeout(() => {
@@ -92,6 +113,19 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
   // and the tail end of the opponent-answered-first delay above.
   useEffect(() => { inputRef.current?.focus(); }, [displayRound?.round]);
 
+  // Client-side timeout report — the server re-validates the elapsed time
+  // itself before trusting it (see guess_the_word/engine.py). Mirrors
+  // quick_math's and word_chain's identical pattern.
+  useEffect(() => {
+    const roundStartedAt = payload?.round_started_at as number | undefined;
+    if (!roundStartedAt || status !== "active") return;
+    const elapsedSec = (now - roundStartedAt) / 1000;
+    if (elapsedSec >= ROUND_TIMEOUT_SECONDS && firedTimeoutRef.current !== roundStartedAt) {
+      firedTimeoutRef.current = roundStartedAt;
+      sendAction("round_timeout", {});
+    }
+  }, [now, payload?.round_started_at, status, sendAction]);
+
   // A wrong guess — action_rejected fires the reason back to just this
   // player (see match_runner.py's handle_game_action). Shake the input and
   // give a light error haptic instead of leaving a bad guess sitting there
@@ -105,10 +139,15 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
       setShake(true);
       setTimeout(() => setShake(false), 350);
       inputRef.current?.focus();
+      // A genuinely wrong word (not e.g. a mistimed/stale round_timeout
+      // report) counts toward the mutual-fail auto-skip (spec D.21a) —
+      // reported as its own lightweight action since this rejection path
+      // never persists state (see match_runner.py's handle_game_action).
+      if (data.reason === "WRONG_GUESS") sendAction("wrong_attempt", {});
     }
     socket.on("action_rejected", onRejected);
     return () => { socket.off("action_rejected", onRejected); };
-  }, [socket, matchId]);
+  }, [socket, matchId, sendAction]);
 
   if (!payload || !displayRound) return <LoadingProgress label="Waiting for match to start…" />;
 
@@ -155,6 +194,17 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
               )}
             </AnimatePresence>
           </div>
+
+          {skipMessage && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "rgb(var(--color-ember))", marginTop: -8 }}
+            >
+              {skipMessage}
+            </motion.p>
+          )}
 
           <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center", flexWrap: "wrap", opacity: opponentAnsweredFirst ? 0.35 : 1, transition: "opacity 0.25s" }}>
             {Array.from({ length: wordLength }).map((_, i) => {
@@ -221,7 +271,7 @@ export function GuessTheWordGame({ matchId, roomCode, opponentId, gameKey }: { m
         </div>
       </GameShell>
       {status === "finished" && result && userId && (
-        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} />
+        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} opponentNickname={opponentNickname} />
       )}
     </>
   );
