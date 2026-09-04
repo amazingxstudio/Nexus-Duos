@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pencil, Check, Copy, ChevronUp, Trophy, Target, Percent, User, Users } from "lucide-react";
+import { Pencil, Check, Copy, ChevronUp, Trophy, Target, Percent, User } from "lucide-react";
 import { useAuthStore, Profile, Settings } from "@/store/useAuthStore";
 import { apiFetch } from "@/lib/api";
+import { VisitorStack } from "@/components/ui/VisitorStack";
 
 function TelegramIcon() {
   return (
@@ -94,7 +94,8 @@ export default function MyProfilePage() {
           proportions rather than squeezing it down to fit. The avatar
           overlaps the seam between banner and card, like a cover-photo
           layout, so nothing about the card shrinks to make room for it. */}
-      <div className="glass-panel flex flex-col items-center overflow-hidden text-center">
+      <div className="glass-panel relative flex flex-col items-center overflow-hidden text-center">
+        <VisitorStack visitors={visitors} className="absolute right-3 top-3 z-20" />
         <div className="relative aspect-[101/48] w-full">
           <Image src="/logo-mark.webp" alt="Nexus Duos" fill quality={100} className="object-cover" sizes="480px" />
         </div>
@@ -148,22 +149,6 @@ export default function MyProfilePage() {
         </div>
       </section>
 
-      {visitors.length > 0 && (
-        <section className="mt-6">
-          <h2 className="mb-3 flex items-center gap-1.5 font-display text-sm uppercase tracking-widest text-ink-muted">
-            <Users size={13} />Profile Visitors
-          </h2>
-          <div className="flex gap-3">
-            {visitors.map((v) => (
-              <Link key={v.player_id} href={`/profile/${v.player_id}`} className="glass-card flex flex-1 flex-col items-center gap-1.5 border border-white/[0.08] p-3">
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-surface-raised bg-cover bg-center" style={v.photo_url ? { backgroundImage: `url(${v.photo_url})` } : undefined} />
-                <p className="w-full truncate text-center text-xs text-ink-muted">{v.nickname}</p>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
       <button onClick={() => setAboutOpen(true)} className="mx-auto mt-10 flex flex-col items-center gap-1 text-ink-faint">
         <ChevronUp size={16} />
         <span className="text-xs uppercase tracking-widest">About Nexus Duos</span>
@@ -194,11 +179,19 @@ export default function MyProfilePage() {
                 <div><p className="text-[11px] uppercase text-ink-muted">Team</p><p className="text-ink-primary">AmazinGXStudio</p></div>
               </div>
               <div className="mt-4 flex flex-col gap-2">
-                <a href="https://t.me/aung_myat_minn" target="_blank" rel="noopener noreferrer" className="glass-card flex items-center gap-3 border border-white/[0.08] p-3">
+                <a
+                  href="https://t.me/aung_myat_minn"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="no-callout glass-card flex items-center gap-3 border border-white/[0.08] p-3"
+                >
                   <span className="icon-badge h-9 w-9 bg-cyan/10 text-cyan"><TelegramIcon /></span>
                   <p className="stat-mono text-sm text-ink-primary">@aung_myat_minn</p>
                 </a>
-                <a href="mailto:aungmyatminnx@gmail.com" className="glass-card flex items-center gap-3 border border-white/[0.08] p-3">
+                <a
+                  href="mailto:aungmyatminnx@gmail.com"
+                  className="no-callout glass-card flex items-center gap-3 border border-white/[0.08] p-3"
+                >
                   <span className="icon-badge h-9 w-9 bg-cyan/10 text-cyan"><MailIcon /></span>
                   <p className="stat-mono text-sm text-ink-primary">aungmyatminnx@gmail.com</p>
                 </a>
