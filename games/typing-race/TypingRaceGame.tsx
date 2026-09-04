@@ -16,7 +16,7 @@ const DURATION_MS = 90 * 1000;
 // pause in GuessTheWordGame, so the two race-style games feel consistent.
 const OPPONENT_FIRST_BANNER_MS = 1100;
 
-export function TypingRaceGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
+export function TypingRaceGame({ matchId, roomCode, opponentId, opponentNickname, gameKey }: { matchId: string; roomCode: string; opponentId: string; opponentNickname: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
   const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, leaveMatch } = useGameMatch({ matchId, roomCode });
   const [typed, setTyped] = useState("");
@@ -205,7 +205,7 @@ export function TypingRaceGame({ matchId, roomCode, opponentId, gameKey }: { mat
         </div>
       </GameShell>
       {status === "finished" && result && userId && (
-        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} />
+        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} opponentNickname={opponentNickname} />
       )}
     </>
   );
