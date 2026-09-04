@@ -30,7 +30,7 @@ const CELL = 27;
 
 interface LastMove { type: "h" | "v"; row: number; col: number; by: string }
 
-export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { matchId: string; roomCode: string; opponentId: string; gameKey: string }) {
+export function DotsAndBoxesGame({ matchId, roomCode, opponentId, opponentNickname, gameKey }: { matchId: string; roomCode: string; opponentId: string; opponentNickname: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
   const { payload, scores, remainingMs, sendAction, status, cancelled, opponentDisconnected, result, nudgeSignal, leaveMatch, nudgeOpponent } = useGameMatch({ matchId, roomCode });
   const [now, setNow] = useState(Date.now());
@@ -262,7 +262,7 @@ export function DotsAndBoxesGame({ matchId, roomCode, opponentId, gameKey }: { m
         </div>
       </GameShell>
       {status === "finished" && result && userId && (
-        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} />
+        <MatchResultOverlay myScore={result.scores[userId] ?? 0} opponentScore={result.scores[opponentId] ?? 0} didWin={result.winner_id === null ? null : result.winner_id === userId} gameKey={gameKey} opponentId={opponentId} opponentNickname={opponentNickname} />
       )}
     </>
   );
