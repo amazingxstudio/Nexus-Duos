@@ -76,7 +76,7 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center px-6 pb-28" style={{ paddingTop: "calc(2.5rem + var(--app-safe-top, 0px))" }}>
+    <main className="flex min-h-dvh flex-col items-center px-6 pb-28" style={{ paddingTop: "calc(1rem + var(--app-safe-top, 0px))" }}>
       {/* Mirrors the own-profile page's "Profile" title (app/profile/page.tsx)
           — named here instead of generic since this isn't your own page.
           Also doubles as the fix for the visitor stack: it used to be
