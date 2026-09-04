@@ -146,7 +146,7 @@ export default function RoomPage({ params }: { params: { code: string } }) {
             animate={{ opacity: 1 }}
             className="h-[calc(100dvh-13.5rem)] min-h-0"
           >
-            <GameDispatcher gameKey={room.game.key} matchId={room.match_id} roomCode={room.code} opponentId={opponent.id} />
+            <GameDispatcher gameKey={room.game.key} matchId={room.match_id} roomCode={room.code} opponentId={opponent.id} opponentNickname={opponent.nickname ?? "Opponent"} />
           </motion.div>
         )}
       </AnimatePresence>
