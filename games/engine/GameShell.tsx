@@ -179,7 +179,23 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
           )}
         </AnimatePresence>
 
-        <div className="flex min-h-0 flex-1 items-center justify-center">{children}</div>
+        <div className="flex min-h-0 flex-1 overflow-y-auto">
+          {/* m-auto (not items-center/justify-center on the parent) is
+              deliberate: margin-auto centers this box in both axes when it
+              fits, exactly like the old items-center/justify-center did,
+              but — unlike items-center/justify-center — the auto margins
+              simply collapse toward zero instead of going negative when
+              the content is TALLER than the space left under the floating
+              header above. That negative-margin-style overflow was the
+              actual bug (spec D.19a): a tall board (Connect Four, Dots &
+              Boxes, Memory Race's grid, ...) centered via items-center
+              would overflow upward past this container's own top edge and
+              land underneath the header's score pills instead of below
+              them. overflow-y-auto on the parent means anything still too
+              tall even after that fix scrolls locally within this region
+              instead of spilling out. */}
+          <div className="m-auto w-full">{children}</div>
+        </div>
       </div>
 
       <AnimatePresence>
