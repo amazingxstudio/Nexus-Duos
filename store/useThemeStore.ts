@@ -23,6 +23,14 @@ interface ThemeState {
    * arrives). Falls back to "dark" if Telegram hasn't reported one yet. */
   telegramColorScheme: "light" | "dark";
   setTelegramColorScheme: (v: "light" | "dark") => void;
+  /** Live mirror of Telegram's WebApp.themeParams — the actual palette
+   * (background, text, hint, button colors, etc.) of whichever theme the
+   * user has set for the whole Telegram app. Written by TelegramProvider,
+   * read by ThemeProvider (see lib/telegramTheme.ts for how these get
+   * turned into this app's own CSS tokens). Not persisted, same reasoning
+   * as telegramColorScheme above. */
+  telegramThemeParams: Record<string, string> | null;
+  setTelegramThemeParams: (v: Record<string, string> | null) => void;
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -34,6 +42,8 @@ export const useThemeStore = create<ThemeState>()(
       setTelegramSyncEnabled: (v) => set({ telegramSyncEnabled: v }),
       telegramColorScheme: "dark",
       setTelegramColorScheme: (v) => set({ telegramColorScheme: v }),
+      telegramThemeParams: null,
+      setTelegramThemeParams: (v) => set({ telegramThemeParams: v }),
     }),
     {
       name: "nexus-duos-theme",
