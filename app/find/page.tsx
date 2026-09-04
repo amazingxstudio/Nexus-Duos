@@ -10,6 +10,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { GameInvitePickerSheet } from "@/components/room/GameInvitePickerSheet";
 import { OutgoingInviteToast } from "@/components/room/OutgoingInviteToast";
+import { useMessagesStore } from "@/store/useMessagesStore";
 
 interface RoomResponse {
   room: { code: string };
@@ -31,6 +32,7 @@ export default function FindPage() {
   const [sentInvite, setSentInvite] = useState<string | null>(null);
   const [pickerFor, setPickerFor] = useState<PlayerCard | null>(null);
   const [pendingInvite, setPendingInvite] = useState<{ user_id: string; nickname: string } | null>(null);
+  const hasUnreadMessages = useMessagesStore((s) => Object.keys(s.unreadBySender).length > 0);
 
   useEffect(() => {
     if (!token) return;
@@ -46,9 +48,11 @@ export default function FindPage() {
     return () => { socket.off("friend_status_changed", onStatus); };
   }, [socket]);
 
-  // Show every friend here (not just online ones) so offline friends'
-  // last-seen label has somewhere to render — online friends sort first.
-  const sortedFriends = [...friends].sort((a, b) => Number(b.online) - Number(a.online));
+  // Find is for jumping straight into a duel, so only friends who are
+  // actually online (and thus inviteable right now) are listed here.
+  // Offline friends with their last-seen label still show up on the
+  // Friends page.
+  const onlineFriends = friends.filter((f) => f.online);
 
   async function createRoom() {
     setLoading("create");
@@ -176,32 +180,31 @@ export default function FindPage() {
             actually belongs to, instead of floating in the page header. */}
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xs uppercase tracking-wide text-ink-muted">Friends</p>
-          <Link href="/friends" className="icon-badge h-8 w-8 glass-panel" aria-label="Friends">
+          <Link href="/friends" className="icon-badge relative h-8 w-8 glass-panel" aria-label="Friends">
             <Users size={14} className="text-ink-muted" />
+            {hasUnreadMessages && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-magenta ring-2 ring-void" />}
           </Link>
         </div>
 
-        {sortedFriends.length === 0 ? (
-          <div className="glass-panel p-6 text-center text-xs text-ink-muted">No friends added yet — tap the icon above to add some.</div>
+        {onlineFriends.length === 0 ? (
+          <div className="glass-panel p-6 text-center text-xs text-ink-muted">No friends online right now — check back later.</div>
         ) : (
           <div className="flex flex-col gap-2">
-            {sortedFriends.map((f) => (
+            {onlineFriends.map((f) => (
               <div key={f.user_id} className="glass-panel flex items-center gap-3 p-3">
                 <Link href={`/profile/${f.player_id}`} className="flex min-w-0 flex-1 items-center gap-3">
                   <div className="relative shrink-0">
                     <div className="h-9 w-9 overflow-hidden rounded-full bg-surface-raised bg-cover bg-center" style={f.photo_url ? { backgroundImage: `url(${f.photo_url})` } : undefined} />
-                    {f.online && <Circle size={9} className="absolute -bottom-0.5 -right-0.5 fill-cyan text-cyan" />}
+                    <Circle size={9} className="absolute -bottom-0.5 -right-0.5 fill-cyan text-cyan" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink-primary">{f.nickname}</p>
-                    {!f.online && <p className="truncate text-xs text-ink-muted">{f.last_seen_label ?? "Last seen recently"}</p>}
+                    <p className="truncate text-xs text-cyan">Online</p>
                   </div>
                 </Link>
-                {f.online && (
-                  <button onClick={() => setPickerFor(f)} disabled={sentInvite === f.user_id} className="icon-badge h-9 w-9 shrink-0 bg-cyan text-void disabled:opacity-50">
-                    <Swords size={15} />
-                  </button>
-                )}
+                <button onClick={() => setPickerFor(f)} disabled={sentInvite === f.user_id} className="icon-badge h-9 w-9 shrink-0 bg-cyan text-void disabled:opacity-50">
+                  <Swords size={15} />
+                </button>
               </div>
             ))}
           </div>
