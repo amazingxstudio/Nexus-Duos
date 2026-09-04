@@ -9,14 +9,14 @@ import { MemoryRaceGame } from "@/games/memory-race/MemoryRaceGame";
 import { FindTheDifferentGame } from "@/games/find-the-different/FindTheDifferentGame";
 import { WordChainGame } from "@/games/word-chain/WordChainGame";
 
-interface GameDispatcherProps { gameKey: string; matchId: string; roomCode: string; opponentId: string; }
+interface GameDispatcherProps { gameKey: string; matchId: string; roomCode: string; opponentId: string; opponentNickname: string; }
 
 // The final lineup, matching GameKey in the backend one-for-one. Building a
 // game that's currently a placeholder only ever means replacing that one
 // game's *Game.tsx file (same export name, same path) — this switch never
 // needs to change again.
-export function GameDispatcher({ gameKey, matchId, roomCode, opponentId }: GameDispatcherProps) {
-  const props = { matchId, roomCode, opponentId, gameKey };
+export function GameDispatcher({ gameKey, matchId, roomCode, opponentId, opponentNickname }: GameDispatcherProps) {
+  const props = { matchId, roomCode, opponentId, opponentNickname, gameKey };
   switch (gameKey) {
     case "CONNECT_FOUR": return <ConnectFourGame {...props} />;
     case "DOTS_AND_BOXES": return <DotsAndBoxesGame {...props} />;

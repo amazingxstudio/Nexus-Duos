@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Trophy, Frown, Minus, Swords, Home, RefreshCw, Check, UserPlus } from "lucide-react";
+import { Trophy, Frown, Minus, Swords, Home, RefreshCw, Check, UserPlus, Send } from "lucide-react";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { useAuthStore } from "@/store/useAuthStore";
 import { apiFetch } from "@/lib/api";
 import { playWinSound, playLoseSound, playDrawSound, playConfettiPopSound, playFireworkBoomSound } from "@/lib/sound";
 import { hapticNotify } from "@/lib/haptics";
+import { GameInvitePickerSheet } from "@/components/room/GameInvitePickerSheet";
 
 const FIREWORK_COLORS = ["rgb(var(--color-cyan))", "rgb(var(--color-magenta))", "rgb(var(--color-violet))", "rgb(var(--color-ember))"];
 
@@ -172,17 +173,28 @@ interface MatchResultOverlayProps {
   /** Needed to send a "play this exact game again" rematch invite. */
   gameKey: string;
   opponentId: string;
+  /** Shown in the game-picker sheet's "Duel {nickname} in…" heading for
+   *  the separate Invite button (spec — same picker as Friends page's
+   *  invite flow, spec D.18a). */
+  opponentNickname: string;
 }
 
 type RematchState = "idle" | "waiting" | "declined";
 
-export function MatchResultOverlay({ myScore, opponentScore, didWin, gameKey, opponentId }: MatchResultOverlayProps) {
+export function MatchResultOverlay({ myScore, opponentScore, didWin, gameKey, opponentId, opponentNickname }: MatchResultOverlayProps) {
   const socket = useSocket();
   const token = useAuthStore((s) => s.token);
   const [rematch, setRematch] = useState<RematchState>("idle");
   const [friendAdded, setFriendAdded] = useState(false);
   const [friendBusy, setFriendBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  // Separate from the "Duel Again" rematch flow above — this is the same
+  // "pick a game to invite them to" flow the Friends/Find pages use
+  // (spec D.18a), not a same-game rematch, so it gets its own picker-open
+  // flag, waiting state, and cooldown rather than reusing rematch's.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [inviteState, setInviteState] = useState<RematchState>("idle");
+  const [inviteCooldown, setInviteCooldown] = useState(0);
 
   const title = didWin === null ? "Draw" : didWin ? "Victory" : "Defeat";
   const accent = didWin === null ? "text-ink-primary" : didWin ? "text-cyan" : "text-magenta";
@@ -223,17 +235,19 @@ export function MatchResultOverlay({ myScore, opponentScore, didWin, gameKey, op
     return () => { cancelled = true; };
   }, [opponentId, token]);
 
-  // If the rival declines our rematch request, reset the button instead of
+  // If the rival declines our rematch/invite, reset the button instead of
   // leaving it stuck on "waiting" forever. invite:accepted is handled
   // globally by InviteListener (it routes both sides into the new room),
-  // so there's nothing to do here on acceptance.
+  // so there's nothing to do here on acceptance. Both buttons ultimately
+  // send the same invite:send event to the same rival, so a decline
+  // resets whichever of the two is currently showing "waiting".
   useEffect(() => {
     if (!socket) return;
     function onDeclined(data: { by_user_id: string }) {
-      if (data.by_user_id === opponentId) {
-        setRematch("declined");
-        setTimeout(() => setRematch("idle"), 2500);
-      }
+      if (data.by_user_id !== opponentId) return;
+      setRematch((s) => (s === "waiting" ? "declined" : s));
+      setInviteState((s) => (s === "waiting" ? "declined" : s));
+      setTimeout(() => { setRematch((s) => (s === "declined" ? "idle" : s)); setInviteState((s) => (s === "declined" ? "idle" : s)); }, 2500);
     }
     socket.on("invite:declined", onDeclined);
     return () => { socket.off("invite:declined", onDeclined); };
@@ -247,11 +261,25 @@ export function MatchResultOverlay({ myScore, opponentScore, didWin, gameKey, op
     return () => clearTimeout(t);
   }, [cooldown]);
 
+  useEffect(() => {
+    if (inviteCooldown <= 0) return;
+    const t = setTimeout(() => setInviteCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [inviteCooldown]);
+
   function requestRematch() {
     if (cooldown > 0) return;
     socket?.emit("invite:send", { to_user_id: opponentId, game_key: gameKey, is_rematch: true });
     setRematch("waiting");
     setCooldown(REMATCH_COOLDOWN_SECONDS);
+  }
+
+  function sendGameInvite(pickedGameKey: string | null) {
+    if (inviteCooldown > 0) return;
+    socket?.emit("invite:send", { to_user_id: opponentId, game_key: pickedGameKey });
+    setInviteState("waiting");
+    setInviteCooldown(REMATCH_COOLDOWN_SECONDS);
+    setPickerOpen(false);
   }
 
   // Only the opponent's user_id is on hand here (not their player_id), so
@@ -371,26 +399,31 @@ export function MatchResultOverlay({ myScore, opponentScore, didWin, gameKey, op
               {rematch === "waiting" && cooldown === 0 ? <RefreshCw size={16} strokeWidth={2.25} className="animate-spin" /> : <Swords size={16} strokeWidth={2.25} />}
               {cooldown > 0 ? `Duel Again (${cooldown}s)` : "Duel Again"}
             </button>
-            <Link href="/" className="btn-ghost"><Home size={16} strokeWidth={2.25} />Home</Link>
+            <button onClick={() => setPickerOpen(true)} disabled={inviteCooldown > 0} className="btn-ghost disabled:opacity-60">
+              {inviteState === "waiting" && inviteCooldown === 0 ? <RefreshCw size={16} strokeWidth={2.25} className="animate-spin" /> : <Send size={16} strokeWidth={2.25} />}
+              {inviteCooldown > 0 ? `Invite (${inviteCooldown}s)` : "Invite"}
+            </button>
           </div>
+          <Link href="/" className="btn-ghost"><Home size={16} strokeWidth={2.25} />Home</Link>
           <button onClick={toggleFriend} disabled={friendBusy} className="flex items-center gap-1.5 text-xs text-ink-muted disabled:opacity-60">
             {friendAdded ? <Check size={12} className="text-cyan" /> : <UserPlus size={12} />}
             <span className={friendAdded ? "text-cyan" : ""}>{friendAdded ? "Added" : "Add as friend"}</span>
           </button>
           <AnimatePresence mode="wait">
-            {rematch === "waiting" && (
+            {(rematch === "waiting" || inviteState === "waiting") && (
               <motion.p key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 text-xs text-ink-muted">
                 <Check size={12} className="text-cyan" />Waiting for your rival to confirm…
               </motion.p>
             )}
-            {rematch === "declined" && (
+            {(rematch === "declined" || inviteState === "declined") && (
               <motion.p key="declined" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-magenta">
-                Rival declined the rematch.
+                Rival declined the invite.
               </motion.p>
             )}
           </AnimatePresence>
         </div>
       </motion.div>
+      <GameInvitePickerSheet target={pickerOpen ? { user_id: opponentId, nickname: opponentNickname } : null} onClose={() => setPickerOpen(false)} onPick={sendGameInvite} />
     </motion.div>
   );
 }
