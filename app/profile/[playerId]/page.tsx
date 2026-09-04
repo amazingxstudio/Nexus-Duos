@@ -76,8 +76,21 @@ export default function OpponentProfilePage({ params }: { params: { playerId: st
   }
 
   return (
-    <main className="relative flex min-h-dvh flex-col items-center px-6 pb-28 pt-14">
-      <VisitorStack visitors={profile.recent_visitors} className="absolute right-4 top-4 z-20" />
+    <main className="flex min-h-dvh flex-col items-center px-6 pb-28" style={{ paddingTop: "calc(2.5rem + var(--app-safe-top, 0px))" }}>
+      {/* Mirrors the own-profile page's "Profile" title (app/profile/page.tsx)
+          — named here instead of generic since this isn't your own page.
+          Also doubles as the fix for the visitor stack: it used to be
+          pinned absolute right-4 top-4 directly against the page's own
+          top edge, which put it right where Telegram's native
+          back/collapse/⋮ controls float in fullscreen mode, hidden behind
+          them. Living in normal flow on this title row instead means it's
+          wherever the title naturally lands (well below that chrome,
+          same as everything else on this page), not a fixed offset that
+          has to happen to be far enough. */}
+      <div className="mb-6 flex w-full max-w-sm items-center justify-between gap-3">
+        <h1 className="min-w-0 truncate font-display text-2xl font-bold text-ink-primary">{profile.nickname}’s Profile</h1>
+        <VisitorStack visitors={profile.recent_visitors} className="shrink-0" />
+      </div>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative">
         <span className="absolute -inset-1.5 rounded-full border border-magenta opacity-40 animate-pulse-glow" />
         <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-magenta shadow-glow-magenta bg-surface-raised bg-cover bg-center" style={profile.photo_url ? { backgroundImage: `url(${profile.photo_url})` } : undefined}>
