@@ -126,7 +126,7 @@ export function MessagePanel({ target, onClose }: MessagePanelProps) {
               {messages?.map((m) => (
                 <div
                   key={m.id}
-                  className={`selectable max-w-[80%] rounded-card px-3 py-2 text-sm ${m.mine ? "ml-auto bg-cyan/15 text-ink-primary" : "glass-panel text-ink-primary"}`}
+                  className={`selectable max-w-[80%] rounded-card px-3 py-2 text-sm ${m.mine ? "ml-auto bg-cyan/15 text-ink-primary" : "mr-auto glass-panel text-ink-primary"}`}
                 >
                   {m.content}
                 </div>
