@@ -105,7 +105,13 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
         paddingBottom: "calc(2rem + var(--app-safe-bottom, 0px))",
       }}
     >
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex shrink-0 items-center justify-between">
+        <ScorePill label="You" score={myScore} accent="cyan" photoUrl={myPhotoUrl} />
+        <span className="font-display text-xs uppercase tracking-widest text-ink-faint">VS</span>
+        <ScorePill label="Rival" score={opponentScore} accent="magenta" photoUrl={opponentPhotoUrl} />
+      </div>
+
+      <div className="mt-4 flex shrink-0 items-center gap-3">
         <div className="glass-panel h-2 flex-1 overflow-hidden rounded-full">
           <motion.div
             className={`h-full rounded-full ${urgent ? "bg-magenta" : "bg-gradient-to-r from-cyan to-violet"}`}
@@ -116,16 +122,10 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
         <button
           onClick={() => setConfirmingLeave(true)}
           aria-label="Exit match"
-          className="icon-badge h-8 w-8 shrink-0 bg-white/5 text-ink-muted"
+          className="icon-badge h-9 w-9 shrink-0 bg-white/5 text-ink-muted"
         >
-          <LogOut size={14} />
+          <LogOut size={16} />
         </button>
-      </div>
-
-      <div className="mt-4 flex shrink-0 items-center justify-between">
-        <ScorePill label="You" score={myScore} accent="cyan" photoUrl={myPhotoUrl} />
-        <span className="font-display text-xs uppercase tracking-widest text-ink-faint">VS</span>
-        <ScorePill label="Rival" score={opponentScore} accent="magenta" photoUrl={opponentPhotoUrl} />
       </div>
 
       <div className="mt-4 flex min-h-0 flex-1 flex-col">
@@ -203,16 +203,16 @@ function ScorePill({ label, score, accent, photoUrl }: { label: string; score: n
       initial={{ scale: 1.08 }}
       animate={{ scale: 1 }}
       transition={{ duration: 0.2 }}
-      className={`glass-panel inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-3 ${accent === "cyan" ? "border-cyan/30" : "border-magenta/30"}`}
+      className={`glass-panel inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-4 ${accent === "cyan" ? "border-cyan/30" : "border-magenta/30"}`}
     >
       <span
-        className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-surface-raised bg-cover bg-center"
+        className={`flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-surface-raised bg-cover bg-center ${accent === "cyan" ? "border-cyan/40" : "border-magenta/40"}`}
         style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}
       >
         {!photoUrl && <User size={13} strokeWidth={1.75} className="text-ink-muted" />}
       </span>
       <span className="whitespace-nowrap text-[11px] uppercase tracking-wide text-ink-muted">{label}</span>
-      <span className={`stat-mono whitespace-nowrap text-lg font-semibold ${accent === "cyan" ? "text-cyan" : "text-magenta"}`}>{score}</span>
+      <span className={`stat-mono ml-0.5 whitespace-nowrap text-lg font-semibold ${accent === "cyan" ? "text-cyan" : "text-magenta"}`}>{score}</span>
     </motion.div>
   );
 }
