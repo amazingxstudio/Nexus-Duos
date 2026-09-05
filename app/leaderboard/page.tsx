@@ -15,12 +15,19 @@ interface LeaderboardEntry {
 }
 
 const CACHE_KEY = "nexus_leaderboard_cache";
+// Only human players belong on the leaderboard. "AI" is the same nickname
+// convention app/history and app/profile already key off of to spot a bot
+// opponent (see their `m.opponent.nickname === "AI"` checks) — there's no
+// separate is_ai flag on a leaderboard entry, so this is the one signal
+// available to tell an AI seed account apart from a real one.
+const MAX_VISIBLE = 5;
 
 export default function LeaderboardPage() {
   const token = useAuthStore((s) => s.token);
   const myPlayerId = useAuthStore((s) => s.user?.profile.player_id);
   const [players, setPlayers] = useState<LeaderboardEntry[] | null>(null);
   const [error, setError] = useState(false);
+  const visiblePlayers = players?.filter((p) => p.nickname !== "AI").slice(0, MAX_VISIBLE) ?? null;
 
   function load() {
     setError(false);
@@ -54,10 +61,10 @@ export default function LeaderboardPage() {
         <div className="flex flex-col gap-2">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="glass-panel h-16 animate-pulse-glow p-4" />)}</div>
       )}
 
-      {players?.length === 0 && <div className="glass-panel p-8 text-center text-ink-muted">No ranked players yet.</div>}
+      {visiblePlayers?.length === 0 && <div className="glass-panel p-8 text-center text-ink-muted">No ranked players yet.</div>}
 
       <div className="flex flex-col gap-2">
-        {players?.map((p, i) => {
+        {visiblePlayers?.map((p, i) => {
           const rank = i + 1;
           const isMe = !!myPlayerId && p.player_id === myPlayerId;
           const RankIcon = rank === 1 ? Trophy : rank <= 3 ? Medal : null;
