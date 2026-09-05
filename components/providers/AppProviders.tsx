@@ -8,6 +8,7 @@ import { MessageNotificationListener } from "./MessageNotificationListener";
 import { RoomSync } from "./RoomSync";
 import { TelegramBackButton } from "./TelegramBackButton";
 import { ImageCacheRegistrar } from "./ImageCacheRegistrar";
+import { AudioUnlockListener } from "./AudioUnlockListener";
 import { ActiveRoomFloatingButton } from "@/components/ui/ActiveRoomFloatingButton";
 import { MessagePanel } from "@/components/friends/MessagePanel";
 import { useMessagesStore } from "@/store/useMessagesStore";
@@ -30,6 +31,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           <TelegramBackButton />
           {/* Global, always-mounted, renders nothing — see ImageCacheRegistrar.tsx. */}
           <ImageCacheRegistrar />
+          {/* Global, always-mounted, renders nothing — see AudioUnlockListener.tsx. */}
+          <AudioUnlockListener />
           {children}
           <InviteListener />
           <MessageNotificationListener />
