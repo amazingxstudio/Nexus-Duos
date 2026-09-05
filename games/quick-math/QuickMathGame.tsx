@@ -114,7 +114,7 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
   return (
     <>
       <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, width: "100%", maxWidth: 300 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, width: "100%", maxWidth: 220 }}>
           <motion.p
             key={`${a}${op}${b}`}
             initial={{ opacity: 0, y: -8 }}
@@ -154,9 +154,9 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
             {value || <span style={{ color: "rgb(var(--color-ink-faint))", fontWeight: 400, fontSize: 16 }}>?</span>}
           </motion.div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
             {DIAL_ROWS.map((row, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, justifyItems: "center" }}>
                 {row.map((key) => {
                   const isConfirm = key === "confirm";
                   return (
@@ -165,6 +165,8 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
                       onClick={() => tapKey(key)}
                       disabled={status !== "active" || (isConfirm && value === "")}
                       style={{
+                        width: "100%",
+                        maxWidth: 56,
                         aspectRatio: "1",
                         borderRadius: isConfirm ? 18 : "50%",
                         border: "none",
