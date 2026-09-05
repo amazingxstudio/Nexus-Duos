@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useRoomPhaseStore } from "@/store/useRoomPhaseStore";
 
 /**
  * Wires Telegram's native BackButton (the affordance that also captures
@@ -36,6 +37,14 @@ export function TelegramBackButton() {
     if (!tg?.BackButton) return;
 
     function handleBack() {
+      // Mid-match, back shouldn't silently pop navigation (which used to
+      // skip straight past the forfeit warning) — route it into the same
+      // "Leave this match?" confirmation the in-game Exit icon opens, and
+      // let that dialog decide what happens next.
+      if (useRoomPhaseStore.getState().inGame) {
+        useRoomPhaseStore.getState().requestExit();
+        return;
+      }
       if (navigationCount.current <= 1) router.push("/");
       else router.back();
     }
