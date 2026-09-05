@@ -111,6 +111,21 @@ function noiseBurst(startOffset: number, duration: number, peakGain: number) {
  * play. */
 export function unlockAudio() {
   getCtx();
+  // Also prime the DM chime's <audio> element itself. A Web Audio
+  // AudioContext and an HTMLAudioElement are unlocked independently by
+  // mobile browsers/WebViews — resuming the shared AudioContext above does
+  // nothing for this separate element. Playing it muted-and-instantly-paused
+  // here, during a real gesture, is what lets the later un-muted,
+  // gesture-less play() call in playDmNotificationSound() actually produce
+  // sound instead of being silently rejected.
+  const el = getDmAudioEl();
+  if (el) {
+    const wasMuted = el.muted;
+    el.muted = true;
+    el.play()
+      .then(() => { el.pause(); el.currentTime = 0; el.muted = wasMuted; })
+      .catch(() => { el.muted = wasMuted; });
+  }
 }
 
 /** Bright ascending arpeggio, into a held shimmering sweep — roughly 2.2s
