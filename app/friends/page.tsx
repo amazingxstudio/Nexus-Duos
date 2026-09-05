@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Search, UserPlus, Swords, Circle, Check, MessageCircle } from "lucide-react";
+import { Search, UserPlus, Swords, Check, MessageCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSocket } from "@/components/providers/SocketProvider";
@@ -175,7 +175,7 @@ export default function FriendsPage() {
               <Link href={`/profile/${f.player_id}`} onContextMenu={suppressContextMenu} className="flex min-w-0 flex-1 items-center gap-3">
                 <div className="relative">
                   <Avatar photoUrl={f.photo_url} />
-                  {f.online && <Circle size={10} className="absolute -bottom-0.5 -right-0.5 fill-cyan text-cyan" />}
+                  {f.online && <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-cyan ring-2 ring-void" />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink-primary">{f.nickname}</p>
@@ -199,12 +199,14 @@ export default function FriendsPage() {
               <button
                 onClick={() => openConversation({ user_id: f.user_id, nickname: f.nickname })}
                 aria-label={`Message ${f.nickname}`}
-                className="icon-badge relative h-9 w-9 shrink-0 bg-white/5 text-ink-muted"
+                className="icon-badge h-9 w-9 shrink-0 bg-white/5 text-ink-muted"
               >
-                <MessageCircle size={17} strokeWidth={2} />
-                {!!unreadBySender[f.user_id] && (
-                  <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-magenta ring-2 ring-void" />
-                )}
+                <span className="relative inline-flex">
+                  <MessageCircle size={20} strokeWidth={2} />
+                  {!!unreadBySender[f.user_id] && (
+                    <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-magenta ring-1 ring-void" />
+                  )}
+                </span>
               </button>
             </motion.div>
           );
