@@ -113,14 +113,23 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
 
   return (
     <>
-      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, width: "100%", maxWidth: 220, margin: "0 auto" }}>
+      <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch} stretchBoard>
+        {/* height: "100%" fills the stretchBoard area GameShell now hands
+            us. We deliberately do NOT justify-content: space-between the
+            whole column — that would shove the equation/answer box down
+            too, moving the "top" the user asked to leave alone. Instead
+            marginTop: "auto" lives on the keypad block below, so only IT
+            (and the hint text after it) gets pushed down to consume the
+            freed space, anchoring the keypad to the bottom while the
+            equation and answer box stay exactly where they were. maxWidth
+            220 -> 360 is the actual "make it bigger" width increase. */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18, width: "100%", maxWidth: 360, height: "100%", margin: "0 auto" }}>
           <motion.p
             key={`${a}${op}${b}`}
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             className="stat-mono"
-            style={{ fontSize: 34, fontWeight: 700, color: "rgb(var(--color-ink-primary))" }}
+            style={{ fontSize: 42, fontWeight: 700, color: "rgb(var(--color-ink-primary))" }}
           >
             {a} {op} {b}
           </motion.p>
@@ -141,11 +150,11 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
             style={{
               width: "100%",
               textAlign: "center",
-              fontSize: 26,
+              fontSize: 32,
               fontWeight: 700,
-              borderRadius: 14,
-              padding: "10px 16px",
-              minHeight: 50,
+              borderRadius: 16,
+              padding: "14px 18px",
+              minHeight: 68,
               background: "rgb(var(--color-surface))",
               border: `1px solid ${shake ? "rgb(var(--color-magenta))" : "rgb(var(--color-ink-primary) / 0.14)"}`,
               color: "rgb(var(--color-ink-primary))",
@@ -154,9 +163,13 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
             {value || <span style={{ color: "rgb(var(--color-ink-faint))", fontWeight: 400, fontSize: 16 }}>?</span>}
           </motion.div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+          {/* marginTop: "auto" is what pins the keypad (and the hint text
+              after it) to the bottom of the now-full-height column above,
+              instead of letting it drift up and center with everything
+              else. */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", marginTop: "auto" }}>
             {DIAL_ROWS.map((row, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, justifyItems: "center" }}>
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, justifyItems: "center" }}>
                 {row.map((key) => {
                   const isConfirm = key === "confirm";
                   return (
@@ -166,13 +179,13 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
                       disabled={status !== "active" || (isConfirm && value === "")}
                       style={{
                         width: "100%",
-                        maxWidth: 56,
+                        maxWidth: 78,
                         aspectRatio: "1",
-                        borderRadius: isConfirm ? 18 : "50%",
+                        borderRadius: isConfirm ? 22 : "50%",
                         border: "none",
                         background: isConfirm ? "rgb(var(--color-cyan))" : "rgb(var(--color-surface))",
                         color: isConfirm ? "rgb(var(--color-void))" : "rgb(var(--color-ink-primary))",
-                        fontSize: 20,
+                        fontSize: 24,
                         fontWeight: 600,
                         display: "flex",
                         alignItems: "center",
@@ -180,7 +193,7 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
                         opacity: isConfirm && value === "" ? 0.5 : 1,
                       }}
                     >
-                      {key === "del" ? <Delete size={18} /> : isConfirm ? <CornerDownLeft size={20} strokeWidth={2.5} /> : key}
+                      {key === "del" ? <Delete size={22} /> : isConfirm ? <CornerDownLeft size={24} strokeWidth={2.5} /> : key}
                     </button>
                   );
                 })}
@@ -188,7 +201,7 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
             ))}
           </div>
 
-          <p style={{ fontSize: 11, color: "rgb(var(--color-ink-faint))", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <p style={{ fontSize: 12, color: "rgb(var(--color-ink-faint))", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Fastest correct answer scores
           </p>
         </div>
