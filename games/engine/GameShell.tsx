@@ -24,10 +24,16 @@ interface GameShellProps {
   /** Exit button, after the confirm dialog. Server decides forfeit vs.
    * void based on whether the rival is still connected. */
   onLeave: () => void;
+  /** Opt-in: let the board fill the FULL remaining height instead of the
+   * default shrink-wrap-and-center. Top edge lands exactly where the
+   * default centering would have put it — only the bottom stretches, down
+   * to this shell's own bottom safe-area padding. Only Quick Math sets
+   * this today; every other game keeps the original centered sizing. */
+  stretchBoard?: boolean;
   children: React.ReactNode;
 }
 
-export function GameShell({ remainingMs, totalMs, myScore, opponentScore, opponentDisconnected, cancelled, nudgeSignal, onLeave, children }: GameShellProps) {
+export function GameShell({ remainingMs, totalMs, myScore, opponentScore, opponentDisconnected, cancelled, nudgeSignal, onLeave, stretchBoard, children }: GameShellProps) {
   const router = useRouter();
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const shakeControls = useAnimation();
@@ -169,8 +175,14 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
               header above, instead of overflowing upward past this
               container's own top edge. overflow-y-auto on the parent means
               anything still too tall even after that scrolls locally
-              within this region instead of spilling out. */}
-          <div className="m-auto w-full">{children}</div>
+              within this region instead of spilling out.
+              stretchBoard skips that shrink-wrap-and-center for the one
+              game that wants its board to occupy the full remaining
+              height: h-full replaces the vertical half of m-auto (so the
+              box's top stays exactly where centering would have placed
+              it) while mx-auto keeps the horizontal centering. The board
+              itself then decides how to spend that extra height. */}
+          <div className={stretchBoard ? "mx-auto h-full w-full" : "m-auto w-full"}>{children}</div>
         </div>
       </div>
 
@@ -220,7 +232,13 @@ function ScorePill({ label, score, accent, photoUrl }: { label: string; score: n
       initial={{ scale: 1.08 }}
       animate={{ scale: 1 }}
       transition={{ duration: 0.2 }}
-      className={`glass-panel inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-4 ${accent === "cyan" ? "border-cyan/30" : "border-magenta/30"}`}
+      // rounded-[14px] matches the avatar's own curve exactly (the h-7 w-7
+      // rounded-full avatar below has a 14px radius) instead of
+      // rounded-full's stadium shape, whose corner radius scales off this
+      // pill's own height and ended up LARGER than the avatar's — cutting
+      // in close enough that a two-digit score could brush the curve.
+      // pr-5 (was pr-4) gives the score digits a bit more clearance too.
+      className={`glass-panel inline-flex items-center gap-2 rounded-[14px] py-1 pl-1 pr-5 ${accent === "cyan" ? "border-cyan/30" : "border-magenta/30"}`}
     >
       <span
         className={`flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-surface-raised bg-cover bg-center ${accent === "cyan" ? "border-cyan/40" : "border-magenta/40"}`}
