@@ -114,7 +114,7 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
   return (
     <>
       <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, width: "100%", maxWidth: 220 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, width: "100%", maxWidth: 220, margin: "0 auto" }}>
           <motion.p
             key={`${a}${op}${b}`}
             initial={{ opacity: 0, y: -8 }}
