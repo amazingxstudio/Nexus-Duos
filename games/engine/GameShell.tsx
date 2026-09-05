@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { WifiOff, LogOut, X, Ban, User } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useActiveRoomStore } from "@/store/useActiveRoomStore";
+import { useRoomPhaseStore } from "@/store/useRoomPhaseStore";
 
 interface GameShellProps {
   remainingMs: number | null;
@@ -43,6 +44,22 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
   const myPhotoUrl = useAuthStore((s) => s.user?.photo_url);
   const room = useActiveRoomStore((s) => s.room);
   const opponentPhotoUrl = room ? (room.player1.id === myUserId ? room.player2?.photo_url : room.player1.photo_url) : null;
+
+  // exitRequestId lives in a global store (so TelegramBackButton, mounted
+  // once at the app root, can reach it) and is never reset between
+  // matches — so a fresh GameShell mount can't just react to "is it
+  // nonzero" the way nudgeSignal does, or a leftover count from a
+  // *previous* match would pop this dialog open immediately. Capturing
+  // the value seen on mount and only firing once it moves past that
+  // baseline is what makes this instance react solely to back-presses
+  // that happen while it itself is on screen.
+  const exitRequestId = useRoomPhaseStore((s) => s.exitRequestId);
+  const mountExitRequestId = useRef(exitRequestId);
+  useEffect(() => {
+    if (exitRequestId === mountExitRequestId.current) return;
+    if (cancelled) return; // this screen already has its own Home button
+    setConfirmingLeave(true);
+  }, [exitRequestId, cancelled]);
 
   useEffect(() => {
     if (!nudgeSignal) return;
