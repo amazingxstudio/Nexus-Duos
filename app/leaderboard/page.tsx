@@ -15,11 +15,11 @@ interface LeaderboardEntry {
 }
 
 const CACHE_KEY = "nexus_leaderboard_cache";
-// Only human players belong on the leaderboard. "AI" is the same nickname
-// convention app/history and app/profile already key off of to spot a bot
-// opponent (see their `m.opponent.nickname === "AI"` checks) — there's no
-// separate is_ai flag on a leaderboard entry, so this is the one signal
-// available to tell an AI seed account apart from a real one.
+// Only human players belong on the leaderboard. The backend's
+// /profile/leaderboard already excludes the 3 Practice-vs-AI bot accounts
+// (see nexus-duos-bot's app/games/ai/bots.py) by player_id, so this is just
+// a client-side safety net — their nicknames are "AI · Easy" / "AI · Normal"
+// / "AI · Pro", hence the prefix check rather than an exact match.
 const MAX_VISIBLE = 5;
 
 export default function LeaderboardPage() {
@@ -27,7 +27,7 @@ export default function LeaderboardPage() {
   const myPlayerId = useAuthStore((s) => s.user?.profile.player_id);
   const [players, setPlayers] = useState<LeaderboardEntry[] | null>(null);
   const [error, setError] = useState(false);
-  const visiblePlayers = players?.filter((p) => p.nickname !== "AI").slice(0, MAX_VISIBLE) ?? null;
+  const visiblePlayers = players?.filter((p) => !p.nickname.startsWith("AI")).slice(0, MAX_VISIBLE) ?? null;
 
   function load() {
     setError(false);
