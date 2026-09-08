@@ -6,6 +6,7 @@ import { Eye, EyeOff, Volume2, Vibrate, RefreshCw, Sun, Moon, SunMoon, Palette }
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useThemeStore, ThemeMode } from "@/store/useThemeStore";
+import { useWallpaperStore } from "@/store/useWallpaperStore";
 
 interface Settings {
   show_history_to_all: boolean; sound_enabled: boolean; haptics_enabled: boolean;
@@ -17,6 +18,13 @@ const CACHE_KEY = "nexus_settings_cache";
 export default function SettingsPage() {
   const token = useAuthStore((s) => s.token);
   const { mode, setMode, telegramSyncEnabled, setTelegramSyncEnabled } = useThemeStore();
+  // A custom photo wallpaper already has its own text/panel contrast
+  // baked in (see UserWallpaper.is_light / ThemeProvider.tsx, which always
+  // wins over both of the controls below regardless of what they're set
+  // to). Letting someone flip them anyway while a custom wallpaper is on
+  // would just be dead, confusing UI — so both are locked here, with a
+  // note pointing at the one thing that actually re-enables them.
+  const wallpaperLocked = useWallpaperStore((s) => s.mode) === "custom";
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState(false);
 
@@ -81,11 +89,11 @@ export default function SettingsPage() {
       <h1 className="mb-6 font-display text-2xl font-bold text-ink-primary">Settings</h1>
 
       <p className="mb-3 text-xs uppercase tracking-wide text-ink-muted">Theme</p>
-      {/* Telegram sync overrides the manual picker below when on — see
-          ThemeProvider.tsx. Buttons are disabled rather than hidden so the
-          currently-active theme (as mirrored from Telegram) still reads
-          clearly even while sync is on. */}
-      <div className={`glass-panel mb-3 grid grid-cols-3 gap-1 p-1 transition-opacity ${telegramSyncEnabled ? "pointer-events-none opacity-50" : ""}`}>
+      {/* Telegram sync overrides the manual picker below when on, and a
+          custom wallpaper overrides both — see ThemeProvider.tsx. Buttons
+          are disabled rather than hidden so the currently-active theme
+          still reads clearly even while it's locked. */}
+      <div className={`glass-panel mb-3 grid grid-cols-3 gap-1 p-1 transition-opacity ${telegramSyncEnabled || wallpaperLocked ? "pointer-events-none opacity-50" : ""}`}>
         {THEME_OPTIONS.map((opt) => {
           const Icon = opt.icon;
           const active = mode === opt.mode;
@@ -93,7 +101,7 @@ export default function SettingsPage() {
             <button
               key={opt.mode}
               onClick={() => setMode(opt.mode)}
-              disabled={telegramSyncEnabled}
+              disabled={telegramSyncEnabled || wallpaperLocked}
               className={`flex flex-col items-center gap-1 rounded-card py-3 text-xs transition-colors ${active ? "bg-cyan/10 text-cyan" : "text-ink-muted"}`}
             >
               <Icon size={16} />
@@ -109,7 +117,13 @@ export default function SettingsPage() {
           description="Match Telegram's whole current theme — colors, buttons, and nav — instead of choosing above"
           checked={telegramSyncEnabled}
           onChange={setTelegramSyncEnabled}
+          disabled={wallpaperLocked}
         />
+        {wallpaperLocked && (
+          <p className="px-1 text-xs text-ink-muted">
+            Your custom wallpaper is setting the theme automatically, so these are locked. Remove it with /wallpaper in the bot to choose a theme here again.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-3">
