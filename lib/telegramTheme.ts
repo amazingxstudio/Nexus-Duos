@@ -101,6 +101,25 @@ export function wallpaperGradientFromTheme(params: TelegramThemeParams | null): 
   );
 }
 
+/** Whether the "telegram_sync" wallpaper gradient above reads as light
+ *  overall — driven by the same bg_color that dominates its visible area
+ *  (the two accent glows are small and low-opacity by comparison next to
+ *  the base `rgb(${bg})` layer). Used by WallpaperLayer.tsx to flip the
+ *  app's text/panel theme so it stays readable over a bright synced
+ *  background, the same way UserWallpaper.is_light does for a custom
+ *  photo (see backend/app/wallpaper.py). Returns null under the same
+ *  condition wallpaperGradientFromTheme does (no bg_color yet). */
+export function wallpaperGradientIsLight(params: TelegramThemeParams | null): boolean | null {
+  const bg = hexToRgbTriplet(params?.bg_color);
+  if (!bg) return null;
+  const [r, g, b] = bg.split(" ").map(Number);
+  // Rec. 709 luma weighting — a plain channel average would call a
+  // saturated pure blue "as bright" as an equally saturated pure green,
+  // which doesn't match how legible text actually reads against either.
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance >= 0.55;
+}
+
 /** Hex form of whichever color should back Telegram's own native header
  *  bar / WebView background (tg.setHeaderColor / setBackgroundColor) so
  *  Telegram's own chrome matches the synced palette too, not just the
