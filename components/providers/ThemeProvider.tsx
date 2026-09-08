@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useThemeStore, resolveAdaptiveTheme } from "@/store/useThemeStore";
+import { useWallpaperStore } from "@/store/useWallpaperStore";
 import { applySyncedCssVars, clearSyncedCssVars, computeSyncedCssVars, syncedChromeColorHex } from "@/lib/telegramTheme";
 
 // App defaults for Telegram's own native header/WebView background chrome
@@ -15,13 +16,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const telegramSyncEnabled = useThemeStore((s) => s.telegramSyncEnabled);
   const telegramColorScheme = useThemeStore((s) => s.telegramColorScheme);
   const telegramThemeParams = useThemeStore((s) => s.telegramThemeParams);
+  // Light/dark verdict for whichever wallpaper is actually on screen right
+  // now (see WallpaperLayer.tsx and useWallpaperStore's doc comment) —
+  // null for "original" wallpaper mode, meaning no override here.
+  const wallpaperIsLight = useWallpaperStore((s) => s.detectedIsLight);
 
   useEffect(() => {
     function apply() {
-      // Telegram sync (when on) always wins over the manual mode picker —
-      // see the Settings page, which disables the manual buttons while
-      // this is on so the two can't visibly disagree.
-      const resolved = telegramSyncEnabled ? telegramColorScheme : mode === "adaptive" ? resolveAdaptiveTheme() : mode;
+      // A non-"original" wallpaper wins over everything below it — text
+      // and panels need to stay readable against whatever's actually
+      // visible behind them, which the manual mode picker / Telegram
+      // theme sync can't know about (neither has any idea a photo
+      // wallpaper is even on screen). Falls through to the existing
+      // manual-mode-or-Telegram-sync resolution whenever there's no
+      // active wallpaper override (wallpaperIsLight is null).
+      const resolved =
+        wallpaperIsLight !== null
+          ? wallpaperIsLight ? "light" : "dark"
+          : telegramSyncEnabled ? telegramColorScheme : mode === "adaptive" ? resolveAdaptiveTheme() : mode;
       const isLight = resolved === "light";
       document.documentElement.classList.toggle("theme-light", isLight);
 
@@ -44,10 +56,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     apply();
     // Adaptive mode's day/night boundary still needs a periodic recheck;
-    // harmless no-op re-application when Telegram sync is on instead.
+    // harmless no-op re-application otherwise.
     const interval = setInterval(apply, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [mode, telegramSyncEnabled, telegramColorScheme, telegramThemeParams]);
+  }, [mode, telegramSyncEnabled, telegramColorScheme, telegramThemeParams, wallpaperIsLight]);
 
   return <>{children}</>;
 }
