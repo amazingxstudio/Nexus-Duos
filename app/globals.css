@@ -162,21 +162,22 @@ img.draggable-ok { pointer-events: auto; }
 
 @layer components {
   /* ---- Glass surfaces (Liquid Glass) ----
-     Two things make blur actually read as "glass" instead of a flat
-     translucent rectangle: something vivid and moving behind it (see the
-     much-brighter, more numerous orbs in AmbientBackground.tsx now), and
-     a light cue on the glass itself — a specular highlight along the top
-     edge (::before) plus a hairline inner rim of light (::after). Every
-     surface below gets both, plus its own explicit backdrop-filter: the
-     old setup had .glass-card and .btn-ghost pulling `@apply glass-panel`,
-     but Tailwind's @apply only carries over utility-class declarations —
-     the raw `backdrop-filter` line in .glass-panel was plain CSS, not a
-     utility, so it silently never reached either of them and both were
-     rendering with zero blur this whole time. */
+     No backdrop-filter blur here (deliberately — see WallpaperLayer.tsx's
+     doc comment): with the wallpaper now applying app-wide, every one of
+     these surfaces mounts fresh on every page navigation, and animating a
+     28px backdrop-filter in alongside its own opacity fade produced a
+     visible flash/flicker each time (a well-known compositing quirk with
+     backdrop-filter + opacity transitions, worse still in Telegram's own
+     in-app WebView). A plain translucent surface — background tint,
+     border, and the specular highlight below — reads clean against a
+     photo wallpaper without that cost, and was the preferred look anyway.
+     What still makes it read as "glass" rather than a flat rectangle:
+     something vivid behind it (the AmbientBackground orbs, or the
+     wallpaper itself) plus a light cue on the surface — a specular
+     highlight along the top edge (::before) and a hairline inner rim of
+     light (::after), both below. */
   .glass-panel {
     @apply relative overflow-hidden bg-white/[0.07] border border-white/[0.16] shadow-glass rounded-card;
-    backdrop-filter: blur(28px) saturate(220%);
-    -webkit-backdrop-filter: blur(28px) saturate(220%);
   }
   .theme-light .glass-panel {
     @apply bg-white/50 border-white/70;
@@ -245,8 +246,6 @@ img.draggable-ok { pointer-events: auto; }
   /* Interactive card: lifts and brightens on press/hover */
   .glass-card {
     @apply relative overflow-hidden bg-white/[0.07] border border-white/[0.16] shadow-glass rounded-card transition-all duration-200 ease-out;
-    backdrop-filter: blur(28px) saturate(220%);
-    -webkit-backdrop-filter: blur(28px) saturate(220%);
   }
   .glass-card:active { @apply scale-[0.97] bg-white/[0.1]; }
   @media (hover: hover) {
@@ -282,8 +281,6 @@ img.draggable-ok { pointer-events: auto; }
       font-display font-semibold text-ink-primary bg-white/[0.07] border border-white/[0.16] shadow-glass
       active:scale-[0.96] transition-all duration-150
       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan;
-    backdrop-filter: blur(28px) saturate(220%);
-    -webkit-backdrop-filter: blur(28px) saturate(220%);
   }
   @media (hover: hover) {
     .btn-ghost:hover { @apply bg-white/[0.1] border-white/[0.26]; }
@@ -307,17 +304,16 @@ img.draggable-ok { pointer-events: auto; }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
 
   /* ---- Bottom nav active-tab indicator ----
-     A genuinely refractive glass pill (not a flat cyan-tinted chip) behind
-     the active tab — same "explicit backdrop-filter, not @apply-chained"
-     rule as the rest of the Liquid Glass system above: framer-motion
-     animates this element's position/size directly (layoutId), so it
-     can't just be `glass-panel` (a static className string) without
-     losing that shared-layout animation, hence its own small class here. */
+     A refractive-looking glass pill behind the active tab — no
+     backdrop-filter blur (see the ---- Glass surfaces ---- comment above
+     for why), just a translucent tint plus the same specular-highlight
+     trick. framer-motion animates this element's position/size directly
+     (layoutId), so it can't just be `glass-panel` (a static className
+     string) without losing that shared-layout animation, hence its own
+     small class here. */
   .nav-pill-glass {
     @apply overflow-hidden rounded-full border border-white/[0.16];
     background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(20px) saturate(200%);
-    -webkit-backdrop-filter: blur(20px) saturate(200%);
   }
   .theme-light .nav-pill-glass {
     background: rgba(255, 255, 255, 0.4);
@@ -347,8 +343,6 @@ img.draggable-ok { pointer-events: auto; }
   .nav-liquid-back {
     z-index: 0;
     pointer-events: none;
-    backdrop-filter: blur(18px) saturate(200%);
-    -webkit-backdrop-filter: blur(18px) saturate(200%);
   }
   .nav-liquid-blob {
     position: absolute;
