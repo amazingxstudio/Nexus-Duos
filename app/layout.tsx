@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { AmbientBackground } from "@/components/ui/AmbientBackground";
+import { WallpaperLayer } from "@/components/ui/WallpaperLayer";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
 const display = Space_Grotesk({
@@ -38,6 +39,12 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   themeColor: "#06060B",
+  // Defensive fallback for testing outside Telegram's own WebView (which
+  // is handled instead by TelegramProvider's viewportStableHeight sync —
+  // see --tg-stable-vh in globals.css): keeps the visual viewport from
+  // resizing under the on-screen keyboard in browsers that support this,
+  // so WallpaperLayer's fixed-position background doesn't squish there either.
+  interactiveWidget: "overlays-content",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -49,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-body min-h-dvh bg-void bg-duel-radial antialiased">
         <ThemeProvider>
           <AmbientBackground />
+          <WallpaperLayer />
           <div className="relative z-10">
             <AppProviders>
               {children}

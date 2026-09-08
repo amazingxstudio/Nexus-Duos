@@ -371,4 +371,28 @@ img.draggable-ok { pointer-events: auto; }
     background: rgb(var(--color-cyan) / 0.16);
     box-shadow: 0 10px 16px -6px rgb(var(--color-cyan) / 0.45);
   }
+
+  /* ---- Custom/Telegram-sync wallpaper layer (Chat + Game only) ----
+     See components/ui/WallpaperLayer.tsx — mounted once at the app root
+     so it never remounts on navigation between Chat/Game, and renders
+     nothing at all outside those two contexts (every other page keeps
+     using the plain global AmbientBackground, untouched).
+     Sized off --tg-stable-vh (mirrored from Telegram's own
+     viewportStableHeight by TelegramProvider) instead of 100vh/100dvh,
+     which Telegram's WebView visibly shrinks when the on-screen keyboard
+     opens — using the stable value means only the keyboard-adjacent
+     content (e.g. a chat's input row) moves; this layer never stretches
+     or squishes. The 100dvh fallback keeps this sane outside Telegram
+     (see the interactive-widget=overlays-content viewport meta in
+     app/layout.tsx for that same case). */
+  .wallpaper-layer {
+    position: fixed;
+    inset: 0;
+    height: var(--tg-stable-vh, 100dvh);
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+    pointer-events: none;
+    transition: background-image 0.25s ease;
+  }
   }
