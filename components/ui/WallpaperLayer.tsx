@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { apiFetch, API_URL } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useMessagesStore } from "@/store/useMessagesStore";
 import { useThemeStore } from "@/store/useThemeStore";
 import { useWallpaperStore, WallpaperMode } from "@/store/useWallpaperStore";
 import { wallpaperGradientFromTheme } from "@/lib/telegramTheme";
@@ -31,20 +29,18 @@ function preloadImage(url: string): Promise<string | null> {
  * Single mount point for the per-user wallpaper (see backend/app/wallpaper.py
  * — set entirely from the Telegram bot, no upload UI here). Mounted once at
  * the app root (app/layout.tsx, right alongside AmbientBackground) so it
- * never remounts when navigating between Chat and Game, or when the chat
- * sheet opens/closes.
+ * never remounts while navigating between pages, opening the chat sheet, or
+ * starting a match.
  *
- * Renders nothing at all outside Chat (the global MessagePanel sheet) and
- * Game (a /room/[code] match in progress) — every other page keeps using
- * the plain global AmbientBackground underneath, untouched. Renders nothing
- * for "original" mode even while active, for the same reason: that
- * AmbientBackground is already there and already correct.
+ * Applies app-wide: every page sits on top of it the same way it already
+ * sits on top of AmbientBackground (no per-page opt-in needed — none of the
+ * page containers paint their own opaque background, so this shows through
+ * everywhere, including behind the Message Panel's own translucent glass).
+ * Renders nothing for "original" mode (or before an image/gradient is ready
+ * to paint), letting the existing global AmbientBackground show through
+ * underneath, exactly as before.
  */
 export function WallpaperLayer() {
-  const pathname = usePathname();
-  const chatOpen = useMessagesStore((s) => s.openTarget !== null);
-  const isActive = chatOpen || pathname?.startsWith("/room/") === true;
-
   const token = useAuthStore((s) => s.token);
   const telegramThemeParams = useThemeStore((s) => s.telegramThemeParams);
 
@@ -92,10 +88,9 @@ export function WallpaperLayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // Preloads whichever image is currently the "custom" target, regardless
-  // of whether Chat/Game is even on screen right now — so the very first
-  // time this layer becomes active, the image is already decoded and
-  // ready to paint instantly instead of only starting the fetch then.
+  // Preloads whichever image is currently the "custom" target as soon as
+  // it's known, so the very first paint already has a decoded image ready
+  // instead of only starting the fetch then.
   useEffect(() => {
     if (mode !== "custom" || !customUrl) {
       if (mode !== "custom") setRenderedImageUrl(null);
@@ -108,8 +103,6 @@ export function WallpaperLayer() {
     return () => { cancelled = true; };
   }, [mode, customUrl]);
 
-  if (!isActive) return null;
-
   if (mode === "custom" && renderedImageUrl) {
     return <div className="wallpaper-layer" style={{ backgroundImage: `url(${renderedImageUrl})` }} />;
   }
@@ -121,6 +114,6 @@ export function WallpaperLayer() {
 
   // "original" — or telegram_sync/custom with nothing ready to paint yet —
   // render nothing and let the existing global AmbientBackground show
-  // through, exactly like every page outside Chat/Game.
+  // through instead.
   return null;
 }
