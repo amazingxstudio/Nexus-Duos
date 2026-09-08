@@ -41,6 +41,14 @@ declare global {
        * device safe-area (notch) isn't enough for them. */
       contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number };
       safeAreaInset?: { top: number; bottom: number; left: number; right: number };
+      /** The WebView's visual viewport height, deliberately UNAFFECTED by
+       * the on-screen keyboard opening (unlike window.innerHeight or CSS
+       * 100vh/100dvh, which Telegram's WebView visibly shrinks) — mirrored
+       * into the --tg-stable-vh CSS var below so anything sized off it
+       * (see .wallpaper-layer in globals.css) never stretches/squishes
+       * when the keyboard opens; only the content that's actually meant to
+       * move (e.g. a chat's message-input row) does. */
+      viewportStableHeight?: number;
       /** Bot API 6.1+. Standard event bus — used here to re-read the insets
        * above whenever they change (entering/exiting fullscreen, rotation),
        * and to pick up live theme/back-button changes. */
@@ -112,6 +120,16 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     tg.onEvent?.("contentSafeAreaChanged", applySafeAreaVars);
     tg.onEvent?.("fullscreenChanged", applySafeAreaVars);
 
+    // Keyboard-squish fix (see viewportStableHeight's doc comment above) —
+    // re-read on "viewportChanged" too, which is what fires when the
+    // on-screen keyboard opens/closes.
+    function syncStableHeight() {
+      const height = tg!.viewportStableHeight;
+      if (height) document.documentElement.style.setProperty("--tg-stable-vh", `${height}px`);
+    }
+    syncStableHeight();
+    tg.onEvent?.("viewportChanged", syncStableHeight);
+
     // Theme auto-sync (spec A.5) — mirrors Telegram's own light/dark
     // colorScheme into the theme store. Read once immediately, then kept
     // live via themeChanged; ThemeProvider.tsx decides whether to actually
@@ -163,6 +181,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       tg.offEvent?.("fullscreenChanged", applySafeAreaVars);
       tg.offEvent?.("themeChanged", applyTelegramColorScheme);
       tg.offEvent?.("themeChanged", applyTelegramThemeParams);
+      tg.offEvent?.("viewportChanged", syncStableHeight);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
