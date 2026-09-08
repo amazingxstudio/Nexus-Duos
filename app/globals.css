@@ -366,11 +366,10 @@ img.draggable-ok { pointer-events: auto; }
     box-shadow: 0 10px 16px -6px rgb(var(--color-cyan) / 0.45);
   }
 
-  /* ---- Custom/Telegram-sync wallpaper layer (Chat + Game only) ----
-     See components/ui/WallpaperLayer.tsx — mounted once at the app root
-     so it never remounts on navigation between Chat/Game, and renders
-     nothing at all outside those two contexts (every other page keeps
-     using the plain global AmbientBackground, untouched).
+  /* ---- Custom/Telegram-sync wallpaper layer (app-wide) ----
+     See components/ui/WallpaperLayer.tsx — mounted once at the app root,
+     as a sibling of the routed page content, so it never remounts on
+     navigation and applies behind every page (not just Chat/Game).
      Sized off --tg-stable-vh (mirrored from Telegram's own
      viewportStableHeight by TelegramProvider) instead of 100vh/100dvh,
      which Telegram's WebView visibly shrinks when the on-screen keyboard
@@ -378,7 +377,18 @@ img.draggable-ok { pointer-events: auto; }
      content (e.g. a chat's input row) moves; this layer never stretches
      or squishes. The 100dvh fallback keeps this sane outside Telegram
      (see the interactive-widget=overlays-content viewport meta in
-     app/layout.tsx for that same case). */
+     app/layout.tsx for that same case).
+
+     transform/will-change/backface-visibility below aren't decorative —
+     without them, WebKit (Telegram's iOS in-app browser) treats this
+     fixed-position image as part of the normal paint order, so it gets
+     invalidated and briefly blanks out on ANY unrelated DOM change
+     elsewhere in the tree — most visibly the page content mounting in on
+     every route change. Forcing this layer onto its own GPU compositing
+     layer makes it a cached bitmap the browser can leave alone across
+     those reflows, which is what actually stops the flicker (a plain
+     "original"/no-image background never showed this because there was
+     no image layer to invalidate in the first place). */
   .wallpaper-layer {
     position: fixed;
     inset: 0;
@@ -387,6 +397,9 @@ img.draggable-ok { pointer-events: auto; }
     background-position: center;
     z-index: 0;
     pointer-events: none;
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
     transition: background-image 0.25s ease;
   }
   }
