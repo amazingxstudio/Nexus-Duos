@@ -24,8 +24,20 @@ interface WallpaperState {
    * it changes only when the user actually replaces their wallpaper via
    * the bot, so it's what decides whether `customUrl` needs rebuilding. */
   customUpdatedAt: string | null;
+  /** Whether the *current* wallpaper (whichever `mode` is active) reads as
+   * light overall — null means "no override, use the manual/Telegram-sync
+   * theme choice as normal" (this is always the case for "original" mode).
+   * For "custom" it mirrors UserWallpaper.is_light from GET /settings
+   * (precomputed at upload time — see backend/app/wallpaper.py); for
+   * "telegram_sync" it's computed client-side from the same theme colors
+   * the gradient itself is built from (see
+   * lib/telegramTheme.ts#wallpaperGradientIsLight). Persisted for the same
+   * no-flash-on-launch reason as customUrl above; read by
+   * ThemeProvider.tsx to decide the app's text/panel contrast. */
+  detectedIsLight: boolean | null;
   setMode: (mode: WallpaperMode) => void;
   setCustom: (url: string | null, updatedAt: string | null) => void;
+  setDetectedIsLight: (v: boolean | null) => void;
 }
 
 export const useWallpaperStore = create<WallpaperState>()(
@@ -34,8 +46,10 @@ export const useWallpaperStore = create<WallpaperState>()(
       mode: "original",
       customUrl: null,
       customUpdatedAt: null,
+      detectedIsLight: null,
       setMode: (mode) => set({ mode }),
       setCustom: (customUrl, customUpdatedAt) => set({ customUrl, customUpdatedAt }),
+      setDetectedIsLight: (detectedIsLight) => set({ detectedIsLight }),
     }),
     { name: "nexus-duos-wallpaper" }
   )
