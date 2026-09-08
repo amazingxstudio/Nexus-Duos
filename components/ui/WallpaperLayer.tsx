@@ -5,10 +5,17 @@ import { apiFetch, API_URL } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useThemeStore } from "@/store/useThemeStore";
 import { useWallpaperStore, WallpaperMode } from "@/store/useWallpaperStore";
-import { wallpaperGradientFromTheme } from "@/lib/telegramTheme";
+import { wallpaperGradientFromTheme, wallpaperGradientIsLight } from "@/lib/telegramTheme";
 
 interface SettingsResponse {
-  settings: { wallpaper_mode?: WallpaperMode; wallpaper_updated_at?: string | null };
+  settings: {
+    wallpaper_mode?: WallpaperMode;
+    wallpaper_updated_at?: string | null;
+    // Precomputed server-side at upload time (see backend/app/wallpaper.py)
+    // — only meaningful when wallpaper_mode is "custom"; null/absent
+    // otherwise, same as "no photo on file".
+    wallpaper_is_light?: boolean | null;
+  };
 }
 
 /** Resolves once `url` has fully loaded and decoded — never rejects, so a
@@ -39,6 +46,13 @@ function preloadImage(url: string): Promise<string | null> {
  * Renders nothing for "original" mode (or before an image/gradient is ready
  * to paint), letting the existing global AmbientBackground show through
  * underneath, exactly as before.
+ *
+ * Also drives the app's text/panel contrast: see the `detectedIsLight`
+ * effect below, which pushes a light/dark verdict for whichever wallpaper
+ * is actually active into useWallpaperStore for ThemeProvider.tsx to apply
+ * — kept here rather than in ThemeProvider itself since this is the one
+ * place that already knows which wallpaper is on screen and what its
+ * measured/computed brightness is.
  */
 export function WallpaperLayer() {
   const token = useAuthStore((s) => s.token);
@@ -49,11 +63,15 @@ export function WallpaperLayer() {
   const customUpdatedAt = useWallpaperStore((s) => s.customUpdatedAt);
   const setMode = useWallpaperStore((s) => s.setMode);
   const setCustom = useWallpaperStore((s) => s.setCustom);
+  const setDetectedIsLight = useWallpaperStore((s) => s.setDetectedIsLight);
 
   // Only ever updated once a candidate image has fully decoded — this
   // (not customUrl/mode directly) is what actually gets painted, so
   // switching wallpapers never shows a blank frame while the new one loads.
   const [renderedImageUrl, setRenderedImageUrl] = useState<string | null>(null);
+  // Mirrors settings.wallpaper_is_light verbatim — only meaningful while
+  // mode === "custom", which the effect below is what actually enforces.
+  const [customIsLight, setCustomIsLight] = useState<boolean | null>(null);
 
   // Pulls the authoritative mode/version from the server. Whatever was
   // persisted from last session (via useWallpaperStore's own persist
@@ -67,6 +85,7 @@ export function WallpaperLayer() {
       .then((res) => {
         if (cancelled) return;
         setMode(res.settings.wallpaper_mode ?? "original");
+        setCustomIsLight(res.settings.wallpaper_is_light ?? null);
         const updatedAt = res.settings.wallpaper_updated_at ?? null;
         if (!updatedAt) {
           setCustom(null, null);
@@ -102,6 +121,22 @@ export function WallpaperLayer() {
     });
     return () => { cancelled = true; };
   }, [mode, customUrl]);
+
+  // Resolves to a light/dark verdict for whichever wallpaper is actually
+  // active right now, or null (no override) for "original" — see the
+  // detectedIsLight doc comment on useWallpaperStore for what each mode
+  // sources its verdict from. Deliberately separate from the two effects
+  // above: this one only needs to re-run when the *inputs to the verdict*
+  // change, not on every settings poll or image decode.
+  useEffect(() => {
+    if (mode === "custom") {
+      setDetectedIsLight(customIsLight);
+    } else if (mode === "telegram_sync") {
+      setDetectedIsLight(wallpaperGradientIsLight(telegramThemeParams));
+    } else {
+      setDetectedIsLight(null);
+    }
+  }, [mode, customIsLight, telegramThemeParams, setDetectedIsLight]);
 
   if (mode === "custom" && renderedImageUrl) {
     return <div className="wallpaper-layer" style={{ backgroundImage: `url(${renderedImageUrl})` }} />;
