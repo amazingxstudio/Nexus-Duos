@@ -26,6 +26,8 @@ function MailIcon() {
 
 interface VisitorCard { nickname: string; player_id: string; photo_url?: string | null; }
 
+const VISITORS_CACHE_KEY = "nexus_profile_visitors_cache";
+
 interface MeResponse {
   id: string; telegram_id: string; first_name: string; username?: string | null; photo_url?: string | null;
   profile: Profile; settings: Settings; recent_visitors: VisitorCard[];
@@ -37,7 +39,24 @@ export default function MyProfilePage() {
   const [nickname, setNickname] = useState(user?.profile?.nickname ?? "");
   const [copied, setCopied] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
-  const [visitors, setVisitors] = useState<VisitorCard[]>([]);
+  // Seeded from sessionStorage rather than [] — visitors previously lived
+  // only in this component's own state, so every time you navigated away
+  // from Profile and back, this page fully remounted and the stack
+  // rendered empty for a moment before the /profile/me round-trip
+  // resolved. Over repeated visits that read as the avatars flickering in
+  // and out. Hydrating from the last known list immediately (then
+  // refreshing in the background below) is the same fix Settings already
+  // uses for its own sessionStorage cache — visitors should just always
+  // be there, same as the rest of this page's cached data.
+  const [visitors, setVisitors] = useState<VisitorCard[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cached = sessionStorage.getItem(VISITORS_CACHE_KEY);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Fetches fresh stats (and recent visitors) every time this page is
   // opened — mirrors the History page's own mount-fetch pattern. Without
@@ -56,7 +75,14 @@ export default function MyProfilePage() {
           id: res.id, telegram_id: res.telegram_id, first_name: res.first_name,
           username: res.username, photo_url: res.photo_url, profile: res.profile, settings: res.settings,
         });
-        setVisitors(res.recent_visitors ?? []);
+        const nextVisitors = res.recent_visitors ?? [];
+        setVisitors(nextVisitors);
+        try {
+          sessionStorage.setItem(VISITORS_CACHE_KEY, JSON.stringify(nextVisitors));
+        } catch {
+          // Storage full/unavailable (private mode, etc.) — non-critical,
+          // this just falls back to always fetching fresh next time.
+        }
       })
       .catch(() => {
         // Non-critical — the page still renders from whatever the auth
