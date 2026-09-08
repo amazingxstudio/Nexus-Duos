@@ -2,17 +2,12 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ShieldCheck } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { LoadingProgress } from "@/components/ui/LoadingProgress";
 
 // Shown one line at a time below the logo, each fading/rising in after the
 // last — purely a mood-setting intro, not status copy (that's LoadingProgress's job).
 const INTRO_LINES = ["Where duels begin.", "Two players. One winner."];
-
-// Plain names only (no store links on file) — shown on the connection-error
-// screen below for players to search up themselves.
-const VPN_SUGGESTIONS = ["Hidely VPN", "Ninja VPN", "SpeedTop VPN"];
 
 /**
  * One polished, full-screen gate rendered above all page content while the
@@ -21,54 +16,14 @@ const VPN_SUGGESTIONS = ["Hidely VPN", "Ninja VPN", "SpeedTop VPN"];
  * app/page.tsx, app/find/page.tsx, etc. Once auth resolves to
  * "authenticated", this renders {children} and gets out of the way.
  *
- * "error" gets its own short, VPN-specific screen instead of sitting on
- * the generic loading view forever — TelegramProvider.tsx's retry/backoff
- * (see AUTH_RETRY_DELAYS_MS there) already absorbs a one-off flaky
- * request, so by the time status actually lands on "error" for a real
- * player it's very likely the connection itself (see that file's own
- * comment on why: a cold-start backend or the VPN workaround most Myanmar
- * players are already on can both fail the very first attempt). Excludes
- * the separate "not opened from inside Telegram" case, which isn't a
- * connectivity problem and VPN advice wouldn't fix.
+ * There's no more dedicated "couldn't sign in" screen here — an "error"
+ * status just keeps showing the same loading view as everything else
+ * pre-auth, rather than swapping to troubleshooting copy.
  */
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const status = useAuthStore((s) => s.status);
-  const error = useAuthStore((s) => s.error);
 
   if (status === "authenticated") return <>{children}</>;
-
-  if (status === "error" && error !== "NOT_IN_TELEGRAM") {
-    return (
-      <div className="fixed inset-0 z-[200] flex min-h-dvh items-center justify-center bg-void px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="glass-panel flex w-full max-w-xs flex-col items-center gap-4 p-6 text-center"
-        >
-          <div className="icon-badge h-12 w-12 shrink-0 bg-cyan/15 text-cyan">
-            <ShieldCheck size={22} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-medium text-ink-primary">VPN ချိတ်ပြီးမှ ပြန်ဝင်ပါ</p>
-            <p className="text-xs leading-relaxed text-ink-muted">
-              လိုင်းပိုကောင်းစေရန် VPN ချိတ်ပြီး ဂိမ်းထဲ ပြန်ဝင်ကာ Refresh လုပ်ပေးပါ။
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {VPN_SUGGESTIONS.map((name) => (
-              <span key={name} className="rounded-full border border-white/[0.16] bg-white/[0.06] px-3 py-1 text-[11px] text-ink-muted">
-                {name}
-              </span>
-            ))}
-          </div>
-          <button onClick={() => window.location.reload()} className="btn-primary mt-1 w-full">
-            ပြန်စမ်းမယ်
-          </button>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 z-[200] flex min-h-dvh items-center justify-center bg-void px-6">
