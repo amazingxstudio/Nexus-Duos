@@ -72,6 +72,35 @@ export function computeSyncedCssVars(params: TelegramThemeParams): Record<string
   return vars;
 }
 
+/** Wallpaper-only rendering of the synced palette — a soft two-tone glow
+ *  gradient built straight from Telegram's own background/button colors,
+ *  used by WallpaperLayer.tsx for the "telegram_sync" wallpaper mode.
+ *  Deliberately separate from applySyncedCssVars/computeSyncedCssVars
+ *  above (those re-skin the whole app's CSS tokens under Settings >
+ *  "Sync with Telegram theme"): a user can pick the telegram_sync
+ *  *wallpaper* independently of that broader theme toggle, since
+ *  TelegramProvider keeps `telegramThemeParams` live regardless of
+ *  whether that toggle is on. Returns null when Telegram hasn't reported
+ *  theme params yet (e.g. testing outside Telegram), so the caller can
+ *  fall back to something else instead of painting an empty background. */
+export function wallpaperGradientFromTheme(params: TelegramThemeParams | null): string | null {
+  if (!params) return null;
+  const bg = hexToRgbTriplet(params.bg_color);
+  if (!bg) return null;
+  const secondary = hexToRgbTriplet(params.secondary_bg_color) ?? bg;
+  const accent =
+    hexToRgbTriplet(params.button_color) ??
+    hexToRgbTriplet(params.link_color) ??
+    hexToRgbTriplet(params.accent_text_color) ??
+    secondary;
+
+  return (
+    `radial-gradient(circle at 18% 12%, rgb(${accent} / 0.32), transparent 55%), ` +
+    `radial-gradient(circle at 82% 88%, rgb(${secondary} / 0.4), transparent 60%), ` +
+    `rgb(${bg})`
+  );
+}
+
 /** Hex form of whichever color should back Telegram's own native header
  *  bar / WebView background (tg.setHeaderColor / setBackgroundColor) so
  *  Telegram's own chrome matches the synced palette too, not just the
