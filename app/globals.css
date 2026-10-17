@@ -331,6 +331,19 @@ img.draggable-ok { pointer-events: auto; }
     background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.25) 30%, rgba(255,255,255,0) 60%);
   }
 
+  /* ---- Bottom nav bar blur ----
+     Applied to the nav bar ONLY, not to .glass-panel in general (see the
+     ---- Glass surfaces ---- comment above for why every other surface stays
+     blur-free: they remount on each page navigation and flickered). The
+     BottomNav lives in the root layout and never remounts on navigation, so
+     that flicker doesn't apply to it. Kept light (10px) so the wallpaper
+     and page content behind it are softened, not erased. The -webkit-
+     prefixed copy is what Telegram's iOS WebView actually reads. */
+  .nav-blur {
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    backdrop-filter: blur(10px) saturate(1.4);
+  }
+
   /* ---- Bottom nav "liquid glass" active indicator ----
      A second copy of the active tab's highlight lives BEHIND the nav
      bar (see .nav-liquid-back in BottomNav.tsx) instead of clipped
