@@ -166,7 +166,7 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
           )}
         </AnimatePresence>
 
-        <div className="flex min-h-0 flex-1 overflow-y-auto">
+        <div className={`flex min-h-0 flex-1 overflow-y-auto ${stretchBoard ? "flex-col" : ""}`}>
           {/* m-auto (not items-center/justify-center on the parent) is
               deliberate: margin-auto centers this box in both axes when it
               fits, but — unlike items-center/justify-center — the auto
@@ -178,11 +178,16 @@ export function GameShell({ remainingMs, totalMs, myScore, opponentScore, oppone
               within this region instead of spilling out.
               stretchBoard skips that shrink-wrap-and-center for the one
               game that wants its board to occupy the full remaining
-              height: h-full replaces the vertical half of m-auto (so the
-              box's top stays exactly where centering would have placed
-              it) while mx-auto keeps the horizontal centering. The board
-              itself then decides how to spend that extra height. */}
-          <div className={stretchBoard ? "mx-auto h-full w-full" : "m-auto w-full"}>{children}</div>
+              height. It fills that height with flex (the region becomes
+              a column, the child is flex-1 + a flex column itself)
+              instead of height: 100% — percentage heights on children
+              of flex items are resolved inconsistently across
+              Telegram's WebViews, which left the board at content height
+              (floating high, keypad not pinned) on some devices. The
+              board root then grows with flex: 1 0 auto and never shrinks
+              below its own content, so a short screen scrolls this
+              region instead of overlapping the keypad. */}
+          <div className={stretchBoard ? "mx-auto flex w-full flex-1 flex-col" : "m-auto w-full"}>{children}</div>
         </div>
       </div>
 
