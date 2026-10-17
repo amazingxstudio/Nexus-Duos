@@ -85,9 +85,24 @@ export default function RoomPage({ params }: { params: { code: string } }) {
   const opponent = room.player1.id === user?.id ? room.player2 : room.player1;
   const gameMeta = room.game ? getGameMeta(room.game.key) : undefined;
 
+  // Games that opt in get the whole screen while a match is on: the bottom
+  // nav is hidden in-game (see setInGame above), so the pb-28 gap reserved
+  // for it, the room-code header, and the fixed calc() height below were
+  // all dead space — and the fixed 13.5rem guess ignored Telegram's
+  // fullscreen safe-area insets (GameShell adds those itself), so the
+  // board sat too high with a blank band underneath and, on shorter
+  // phones, got pushed off the bottom. Other games keep the original
+  // layout until they opt in too (add their key here).
+  const FULL_BLEED_GAMES = ["QUICK_MATH"];
+  const inPlay = (room.status === "IN_PROGRESS" || room.status === "FINISHED") && Boolean(room.match_id && room.game && opponent);
+  const fullBleed = inPlay && room.game ? FULL_BLEED_GAMES.includes(room.game.key) : false;
+
   return (
-    <main className="flex min-h-dvh flex-col px-5 pb-28 pt-10">
-      <header className="mb-6 text-center"><p className="stat-mono text-xs text-violet">{room.code}</p></header>
+    <main
+      className={fullBleed ? "flex flex-col overflow-hidden px-5" : "flex min-h-dvh flex-col px-5 pb-28 pt-10"}
+      style={fullBleed ? { height: "var(--tg-stable-vh, 100dvh)" } : undefined}
+    >
+      {!fullBleed && <header className="mb-6 text-center"><p className="stat-mono text-xs text-violet">{room.code}</p></header>}
 
       {room.status !== "IN_PROGRESS" && room.status !== "FINISHED" && (
         <section className="glass-panel mb-6 flex items-stretch p-1">
@@ -144,9 +159,18 @@ export default function RoomPage({ params }: { params: { code: string } }) {
             key="game"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="h-[calc(100dvh-13.5rem)] min-h-0"
+            className={fullBleed ? "relative min-h-0 flex-1" : "h-[calc(100dvh-13.5rem)] min-h-0"}
           >
-            <GameDispatcher gameKey={room.game.key} matchId={room.match_id} roomCode={room.code} opponentId={opponent.id} opponentNickname={opponent.nickname ?? "Opponent"} />
+            {fullBleed ? (
+              // absolute inset-0 gives the game a definite box on every
+              // WebView (top + bottom both pinned), instead of relying on a
+              // percentage height resolving through a flex parent.
+              <div className="absolute inset-0">
+                <GameDispatcher gameKey={room.game.key} matchId={room.match_id} roomCode={room.code} opponentId={opponent.id} opponentNickname={opponent.nickname ?? "Opponent"} />
+              </div>
+            ) : (
+              <GameDispatcher gameKey={room.game.key} matchId={room.match_id} roomCode={room.code} opponentId={opponent.id} opponentNickname={opponent.nickname ?? "Opponent"} />
+            )}
           </motion.div>
         )}
       </AnimatePresence>
