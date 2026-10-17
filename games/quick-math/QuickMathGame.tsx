@@ -18,12 +18,15 @@ const ROUND_TIMEOUT_SECONDS = 8;
 // button to reach outside the pad. No "-" key either: every problem the
 // backend generates (addition, subtraction with the larger number first,
 // multiplication) always has a non-negative answer, so it was dead weight.
-const DIAL_ROWS = [
-  ["1", "2", "3"],
-  ["4", "5", "6"],
-  ["7", "8", "9"],
-  ["del", "0", "confirm"],
-];
+const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "del", "0", "confirm"];
+
+// Key and equation sizes scale with the screen's own height instead of
+// being fixed pixels, so the whole board (equation + answer + 4 keypad
+// rows) fits on short phones without scrolling and doesn't leave a big gap
+// on tall ones. --tg-stable-vh is Telegram's keyboard-proof viewport height
+// (see TelegramProvider.tsx); 100dvh is the fallback outside Telegram.
+const KEY_HEIGHT = "clamp(46px, calc(var(--tg-stable-vh, 100dvh) * 0.08), 68px)";
+const EQUATION_SIZE = "clamp(34px, calc(var(--tg-stable-vh, 100dvh) * 0.055), 48px)";
 
 export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname, gameKey }: { matchId: string; roomCode: string; opponentId: string; opponentNickname: string; gameKey: string }) {
   const userId = useAuthStore((s) => s.user?.id);
@@ -114,94 +117,101 @@ export function QuickMathGame({ matchId, roomCode, opponentId, opponentNickname,
   return (
     <>
       <GameShell remainingMs={remainingMs} totalMs={DURATION_MS} myScore={myScore} opponentScore={opponentScore} opponentDisconnected={opponentDisconnected} cancelled={cancelled} onLeave={leaveMatch} stretchBoard>
-        {/* height: "100%" fills the stretchBoard area GameShell now hands
-            us. We deliberately do NOT justify-content: space-between the
-            whole column — that would shove the equation/answer box down
-            too, moving the "top" the user asked to leave alone. Instead
-            marginTop: "auto" lives on the keypad block below, so only IT
-            (and the hint text after it) gets pushed down to consume the
-            freed space, anchoring the keypad to the bottom while the
-            equation and answer box stay exactly where they were. maxWidth
-            220 -> 360 is the actual "make it bigger" width increase. */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18, width: "100%", maxWidth: 360, height: "100%", margin: "0 auto" }}>
-          <motion.p
-            key={`${a}${op}${b}`}
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="stat-mono"
-            style={{ fontSize: 42, fontWeight: 700, color: "rgb(var(--color-ink-primary))" }}
-          >
-            {a} {op} {b}
-          </motion.p>
-          {skipMessage && (
+        {/* Board root: a column that grows to fill the area GameShell hands
+            it (flex: 1 0 auto — grows, never shrinks below its content, so
+            a very short screen scrolls instead of overlapping). Two zones:
+            the prompt zone (equation + answer) takes all spare height and
+            centers its content, and the keypad sits directly under it,
+            pinned to the bottom. No percentage heights anywhere — those
+            were what let the old board collapse to content height and
+            float high on some Telegram WebViews. */}
+        <div style={{ display: "flex", flexDirection: "column", flex: "1 0 auto", width: "100%", maxWidth: 380, margin: "0 auto", gap: 12 }}>
+          <div style={{ flex: "1 1 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: "8px 0" }}>
             <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "rgb(var(--color-ember))" }}
+              key={`${a}${op}${b}`}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="stat-mono"
+              style={{ fontSize: EQUATION_SIZE, fontWeight: 700, lineHeight: 1.1, color: "rgb(var(--color-ink-primary))" }}
             >
-              {skipMessage}
+              {a} {op} {b}
             </motion.p>
-          )}
 
-          <motion.div
-            animate={shake ? { x: [0, -10, 10, -8, 8, 0] } : { x: 0 }}
-            transition={{ duration: 0.35 }}
-            style={{
-              width: "100%",
-              textAlign: "center",
-              fontSize: 32,
-              fontWeight: 700,
-              borderRadius: 16,
-              padding: "14px 18px",
-              minHeight: 68,
-              background: "rgb(var(--color-surface))",
-              border: `1px solid ${shake ? "rgb(var(--color-magenta))" : "rgb(var(--color-ink-primary) / 0.14)"}`,
-              color: "rgb(var(--color-ink-primary))",
-            }}
-          >
-            {value || <span style={{ color: "rgb(var(--color-ink-faint))", fontWeight: 400, fontSize: 16 }}>?</span>}
-          </motion.div>
+            {/* Fixed-height slot: the skip notice used to be inserted into
+                the column, which shoved the answer box down every time it
+                appeared and back up when it left. */}
+            <div style={{ height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {skipMessage && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{ fontSize: 12, fontWeight: 600, color: "rgb(var(--color-ember))" }}
+                >
+                  {skipMessage}
+                </motion.p>
+              )}
+            </div>
 
-          {/* marginTop: "auto" is what pins the keypad (and the hint text
-              after it) to the bottom of the now-full-height column above,
-              instead of letting it drift up and center with everything
-              else. */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", marginTop: "auto" }}>
-            {DIAL_ROWS.map((row, i) => (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, justifyItems: "center" }}>
-                {row.map((key) => {
-                  const isConfirm = key === "confirm";
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => tapKey(key)}
-                      disabled={status !== "active" || (isConfirm && value === "")}
-                      style={{
-                        width: "100%",
-                        maxWidth: 78,
-                        aspectRatio: "1",
-                        borderRadius: isConfirm ? 22 : "50%",
-                        border: "none",
-                        background: isConfirm ? "rgb(var(--color-cyan))" : "rgb(var(--color-surface))",
-                        color: isConfirm ? "rgb(var(--color-void))" : "rgb(var(--color-ink-primary))",
-                        fontSize: 24,
-                        fontWeight: 600,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        opacity: isConfirm && value === "" ? 0.5 : 1,
-                      }}
-                    >
-                      {key === "del" ? <Delete size={22} /> : isConfirm ? <CornerDownLeft size={24} strokeWidth={2.5} /> : key}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
+            <motion.div
+              animate={shake ? { x: [0, -10, 10, -8, 8, 0] } : { x: 0 }}
+              transition={{ duration: 0.35 }}
+              className="stat-mono"
+              style={{
+                width: "100%",
+                minHeight: 64,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 32,
+                fontWeight: 700,
+                borderRadius: 16,
+                padding: "10px 18px",
+                background: "rgb(var(--color-surface))",
+                border: `1px solid ${shake ? "rgb(var(--color-magenta))" : "rgb(var(--color-ink-primary) / 0.14)"}`,
+                color: "rgb(var(--color-ink-primary))",
+              }}
+            >
+              {value || <span style={{ color: "rgb(var(--color-ink-faint))", fontWeight: 400, fontSize: 16 }}>?</span>}
+            </motion.div>
           </div>
 
-          <p style={{ fontSize: 12, color: "rgb(var(--color-ink-faint))", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, width: "100%" }}>
+            {KEYS.map((key) => {
+              const isConfirm = key === "confirm";
+              const isDel = key === "del";
+              const disabled = status !== "active" || (isConfirm && value === "");
+              return (
+                <motion.button
+                  key={key}
+                  type="button"
+                  onClick={() => tapKey(key)}
+                  disabled={disabled}
+                  whileTap={disabled ? undefined : { scale: 0.94 }}
+                  aria-label={isDel ? "Delete" : isConfirm ? "Submit answer" : undefined}
+                  style={{
+                    height: KEY_HEIGHT,
+                    borderRadius: 18,
+                    border: isConfirm ? "none" : "1px solid rgb(var(--color-ink-primary) / 0.08)",
+                    background: isConfirm ? "rgb(var(--color-cyan))" : "rgb(var(--color-surface))",
+                    color: isConfirm ? "rgb(var(--color-void))" : "rgb(var(--color-ink-primary))",
+                    fontSize: 24,
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: isConfirm && value === "" ? 0.5 : 1,
+                    touchAction: "manipulation",
+                    userSelect: "none",
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  {isDel ? <Delete size={22} /> : isConfirm ? <CornerDownLeft size={24} strokeWidth={2.5} /> : key}
+                </motion.button>
+              );
+            })}
+          </div>
+
+          <p style={{ fontSize: 12, textAlign: "center", color: "rgb(var(--color-ink-faint))" }}>
             Fastest correct answer scores
           </p>
         </div>
