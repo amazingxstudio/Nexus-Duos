@@ -60,7 +60,7 @@ export function BottomNav() {
           })}
         </div>
 
-        <div className="glass-panel relative z-[1] flex w-full items-center justify-between px-2 py-2">
+        <div className="glass-panel nav-blur relative z-[1] flex w-full items-center justify-between px-2 py-2">
           {ITEMS.map((item) => {
             const active = pathname === item.href;
             const Icon = item.Icon;
@@ -82,4 +82,4 @@ export function BottomNav() {
       </div>
     </nav>
   );
-}
+      }
